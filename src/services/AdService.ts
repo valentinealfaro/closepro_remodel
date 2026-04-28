@@ -15,7 +15,10 @@ import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { AdCampaign, AdCreative, AdOffer } from '../types/ads';
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const getAI = () => {
+  const key = process.env.GEMINI_API_KEY || process.env.API_KEY || '';
+  return new GoogleGenAI({ apiKey: key });
+};
 
 export class AdService {
   static async createCampaign(tenantId: string, campaignData: Partial<AdCampaign>) {
@@ -83,7 +86,7 @@ export class AdService {
       - description: A short description (for Google/Facebook).
       - cta: The recommended Call To Action text.`;
 
-      const response = await ai.models.generateContent({
+      const response = await getAI().models.generateContent({
         model: "gemini-3-flash-preview",
         contents: prompt,
         config: {
@@ -105,7 +108,7 @@ export class AdService {
       ${offer.title ? `Include a subtle overlay or context related to: ${offer.title}.` : ''} 
       No text in the image, just a beautiful professional photo.`;
 
-      const response = await ai.models.generateContent({
+      const response = await getAI().models.generateContent({
         model: 'gemini-2.5-flash-image',
         contents: {
           parts: [
