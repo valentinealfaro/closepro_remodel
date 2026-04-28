@@ -1,0 +1,258 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: /tenants/{tenantId}
+    // Schema: tenant
+    // Fields:
+    //   - name: string (required, 1-100 chars)
+    //   - ownerId: string (required, UID)
+    //   - plan: string (required, 'starter'|'growth'|'pro')
+    //   - status: string (required, 'trialing'|'active'|'past_due'|'canceled')
+    //   - createdAt: timestamp (required)
+    //   - onboardingComplete: bool
+    //   - subdomain: string (1-50 chars)
+    //   - customDomain: string (optional)
+    //   - settings: map (optional)
+    //
+    // Collection: /users/{userId}
+    // Schema: user
+    // Fields:
+    //   - email: string (required, email format)
+    //   - displayName: string (optional)
+    //   - tenantId: string (required)
+    //   - role: string (required, 'admin'|'manager'|'sales_rep'|'limited')
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: /tenants/{tenantId}/leads/{leadId}
+    // Schema: lead
+    // Fields:
+    //   - tenantId: string (required)
+    //   - name: string (required, 1-100 chars)
+    //   - email: string (email format)
+    //   - phone: string
+    //   - serviceInterest: string
+    //   - status: string (required)
+    //   - source: string
+    //   - createdAt: timestamp (required)
+    //   - assignedTo: string (UID)
+    //   - notes: string
+    //
+    // [Other collections follow the firebase-blueprint.json schema]
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidUrl(url) {
+      return url is string && (url.matches("^https://.*") || url.matches("^http://.*"));
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated() && 
+        ((request.auth.token.email == "info@vcvservices.com" || 
+          request.auth.token.email == "lawtonroofer@gmail.com") && 
+         request.auth.token.email_verified == true);
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isTenantMember(tenantId) {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             getUserData().tenantId == tenantId;
+    }
+
+    function isTenantAdmin(tenantId) {
+      return isTenantMember(tenantId) && 
+             (getUserData().role == 'admin' || 
+              get(/databases/$(database)/documents/tenants/$(tenantId)).data.ownerId == request.auth.uid);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidTenant(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.ownerId is string &&
+             data.plan in ['starter', 'growth', 'pro'] &&
+             data.status in ['trialing', 'active', 'past_due', 'canceled'];
+    }
+
+    function isValidUser(data) {
+      return data.email is string && isValidEmail(data.email) &&
+             data.tenantId is string &&
+             data.role in ['admin', 'manager', 'sales_rep', 'limited'];
+    }
+
+    function isValidLead(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.tenantId is string &&
+             data.status is string;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    // Global templates
+    match /global_templates/{templateId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isSuperAdmin();
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role != 'super_admin';
+      allow update: if (isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == resource.data.role) || isSuperAdmin();
+    }
+
+    // Tenants collection
+    match /tenants/{tenantId} {
+      allow read: if isTenantMember(tenantId) || isSuperAdmin();
+      allow create: if isAuthenticated() && isValidTenant(request.resource.data) && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isSuperAdmin() || (isTenantAdmin(tenantId) && isValidTenant(request.resource.data) && request.resource.data.ownerId == resource.data.ownerId);
+
+      // Sub-collections for tenants
+      match /leads/{leadId} {
+        allow read: if isTenantMember(tenantId) || isSuperAdmin();
+        allow create: if (isTenantMember(tenantId) && isValidLead(request.resource.data)) || isSuperAdmin();
+        allow update: if (isTenantMember(tenantId) && isValidLead(request.resource.data)) || isSuperAdmin();
+        allow delete: if isTenantAdmin(tenantId) || isSuperAdmin();
+      }
+
+      match /deals/{dealId} {
+        allow read, write: if isTenantMember(tenantId) || isSuperAdmin();
+      }
+
+      match /websites/{websiteId} {
+        allow read: if true; // Publicly readable for client sites
+        allow write: if isTenantAdmin(tenantId) || isSuperAdmin();
+        
+        match /config/{configId} {
+          allow read: if true;
+          allow write: if isTenantAdmin(tenantId) || isSuperAdmin();
+        }
+
+        match /pages/{pageId} {
+          allow read: if true;
+          allow write: if isTenantAdmin(tenantId) || isSuperAdmin();
+          
+          match /sections/{sectionId} {
+            allow read: if true;
+            allow write: if isTenantAdmin(tenantId) || isSuperAdmin();
+          }
+        }
+      }
+
+      match /pipeline_stages/{stageId} {
+        allow read, write: if isTenantMember(tenantId) || isSuperAdmin();
+      }
+
+      match /testimonials/{testimonialId} {
+        allow read: if true;
+        allow write: if isTenantAdmin(tenantId) || isSuperAdmin();
+      }
+
+      match /media_assets/{assetId} {
+        allow read: if isTenantMember(tenantId) || isSuperAdmin();
+        allow write: if isTenantMember(tenantId) || isSuperAdmin();
+      }
+
+      match /ai_generations/{genId} {
+        allow read, write: if isTenantMember(tenantId) || isSuperAdmin();
+      }
+
+      match /ai_logs/{logId} {
+        allow read: if isTenantAdmin(tenantId) || isSuperAdmin();
+        allow create: if isTenantMember(tenantId) || isSuperAdmin();
+      }
+
+      match /visual_projects/{projectId} {
+        allow read, write: if isTenantMember(tenantId) || isSuperAdmin();
+        
+        match /rooms/{roomId} {
+          allow read, write: if isTenantMember(tenantId) || isSuperAdmin();
+          
+          match /designs/{designId} {
+            allow read, write: if isTenantMember(tenantId) || isSuperAdmin();
+          }
+        }
+      }
+
+      match /share_links/{shareId} {
+        allow read: if true;
+        allow write: if isTenantMember(tenantId) || isSuperAdmin();
+      }
+
+      match /estimates/{estimateId} {
+        allow read: if true;
+        allow write: if isTenantMember(tenantId) || isSuperAdmin();
+      }
+
+      match /invoices/{invoiceId} {
+        allow read: if true;
+        allow write: if isTenantMember(tenantId) || isSuperAdmin();
+      }
+
+      match /projects/{projectId} {
+        allow read, write: if isTenantMember(tenantId) || isSuperAdmin();
+      }
+
+      match /payments/{paymentId} {
+        allow read, write: if isTenantMember(tenantId) || isSuperAdmin();
+      }
+
+      match /automations/{automationId} {
+        allow read, write: if isTenantMember(tenantId) || isSuperAdmin();
+      }
+
+      match /automation_logs/{logId} {
+        allow read, write: if isTenantMember(tenantId) || isSuperAdmin();
+      }
+
+      match /ad_campaigns/{campaignId} {
+        allow read, write: if isTenantMember(tenantId) || isSuperAdmin();
+      }
+
+      match /ad_creatives/{adId} {
+        allow read, write: if isTenantMember(tenantId) || isSuperAdmin();
+      }
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Open Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: "Poppins", sans-serif;
+
+  --color-navy: #0A2540;
+  --color-blue-electric: #1E90FF;
+  --color-electric: #1E90FF;
+  --color-charcoal: #1C1C1C;
+}
+
+@layer base {
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+  }
+}
+
+.btn-primary {
+  @apply bg-blue-electric text-white px-6 py-3 rounded-lg font-semibold transition-all hover:bg-blue-electric/90 hover:scale-105 active:scale-95;
+}
+
+.btn-secondary {
+  @apply bg-transparent border-2 border-navy text-navy px-6 py-3 rounded-lg font-semibold transition-all hover:bg-navy hover:text-white;
+}
+
+.section-padding {
+  @apply py-20 px-6 md:px-12 lg:px-24;
+}
+
+.card {
+  @apply bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow;
+}

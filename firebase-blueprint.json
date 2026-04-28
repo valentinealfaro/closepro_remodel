@@ -1,0 +1,527 @@
+{
+  "entities": {
+    "tenant": {
+      "title": "Tenant",
+      "description": "A business account (remodeling company).",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Business name" },
+        "ownerId": { "type": "string", "description": "UID of the primary owner" },
+        "plan": { "type": "string", "enum": ["starter", "growth", "pro"], "description": "Subscription plan" },
+        "status": { "type": "string", "enum": ["trialing", "active", "past_due", "canceled"], "description": "Account status" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "onboardingComplete": { "type": "boolean" },
+        "subdomain": { "type": "string", "description": "Unique subdomain for client site" },
+        "customDomain": { "type": "string", "description": "Optional custom domain" },
+        "settings": {
+          "type": "object",
+          "properties": {
+            "logo": { "type": "string" },
+            "brandColors": { "type": "object" },
+            "phone": { "type": "string" },
+            "email": { "type": "string" }
+          }
+        }
+      },
+      "required": ["name", "ownerId", "plan", "status", "createdAt"]
+    },
+    "user": {
+      "title": "User",
+      "description": "A user account linked to a tenant.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "tenantId": { "type": "string", "description": "ID of the tenant this user belongs to" },
+        "role": { "type": "string", "enum": ["admin", "manager", "sales_rep", "limited"], "description": "User role within the tenant" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "tenantId", "role", "createdAt"]
+    },
+    "lead": {
+      "title": "Lead",
+      "description": "An incoming lead for a remodeler.",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
+        "serviceInterest": { "type": "string" },
+        "status": { "type": "string", "description": "CRM stage ID" },
+        "source": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "assignedTo": { "type": "string", "description": "User ID of assigned sales rep" },
+        "notes": { "type": "string" }
+      },
+      "required": ["tenantId", "name", "status", "createdAt"]
+    },
+    "website": {
+      "title": "Website",
+      "description": "Configuration for the auto-generated client website.",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "templateId": { "type": "string" },
+        "status": { "type": "string", "enum": ["draft", "published"] },
+        "lastPublishedAt": { "type": "string", "format": "date-time" },
+        "globalSettings": {
+          "type": "object",
+          "properties": {
+            "businessName": { "type": "string" },
+            "logo": { "type": "string" },
+            "phone": { "type": "string" },
+            "email": { "type": "string" },
+            "address": { "type": "string" },
+            "brandColors": { "type": "object" },
+            "socialLinks": { "type": "object" },
+            "favicon": { "type": "string" }
+          }
+        },
+        "conversionSettings": {
+          "type": "object",
+          "properties": {
+            "primaryCta": { "type": "object" },
+            "stickyCta": { "type": "boolean" },
+            "chatWidget": { "type": "boolean" },
+            "exitIntentPopup": { "type": "boolean" }
+          }
+        }
+      },
+      "required": ["tenantId", "templateId", "status"]
+    },
+    "website_page": {
+      "title": "Website Page",
+      "description": "A page within the client website.",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "websiteId": { "type": "string" },
+        "title": { "type": "string" },
+        "slug": { "type": "string" },
+        "status": { "type": "string", "enum": ["draft", "published", "private"] },
+        "isHomepage": { "type": "boolean" },
+        "templateType": { "type": "string" },
+        "order": { "type": "number" },
+        "seo": {
+          "type": "object",
+          "properties": {
+            "title": { "type": "string" },
+            "description": { "type": "string" },
+            "keywords": { "type": "string" },
+            "ogImage": { "type": "string" },
+            "canonicalUrl": { "type": "string" }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["tenantId", "websiteId", "title", "slug", "status"]
+    },
+    "website_section": {
+      "title": "Website Section",
+      "description": "A content block within a website page.",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "websiteId": { "type": "string" },
+        "pageId": { "type": "string" },
+        "type": { "type": "string", "description": "hero, services, portfolio, etc." },
+        "content": { "type": "object" },
+        "order": { "type": "number" },
+        "isVisible": { "type": "boolean" },
+        "settings": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["tenantId", "websiteId", "pageId", "type", "order"]
+    },
+    "testimonial": {
+      "title": "Testimonial",
+      "description": "A customer testimonial or review.",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "quote": { "type": "string" },
+        "author": { "type": "string" },
+        "role": { "type": "string" },
+        "company": { "type": "string" },
+        "image": { "type": "string" },
+        "rating": { "type": "number" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "isVisible": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["tenantId", "quote", "author", "createdAt"]
+    },
+    "media_asset": {
+      "title": "Media Asset",
+      "description": "A file or image in the content library.",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "url": { "type": "string" },
+        "type": { "type": "string", "enum": ["image", "video", "pdf"] },
+        "name": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "source": { "type": "string", "description": "upload, ai_visualizer, etc." },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["tenantId", "url", "type", "createdAt"]
+    },
+    "ai_generation": {
+      "title": "AI Generation",
+      "description": "Stored AI remodeling visualizations.",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "leadId": { "type": "string" },
+        "originalImageUrl": { "type": "string" },
+        "generatedImageUrl": { "type": "string" },
+        "roomType": { "type": "string" },
+        "style": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["tenantId", "originalImageUrl", "generatedImageUrl", "createdAt"]
+    },
+    "visual_project": {
+      "title": "Visual Project",
+      "description": "A project container for AI visualizations linked to a lead or deal.",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "leadId": { "type": "string" },
+        "dealId": { "type": "string" },
+        "name": { "type": "string" },
+        "serviceType": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "completed", "archived"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["tenantId", "name", "status", "createdAt"]
+    },
+    "visual_room": {
+      "title": "Visual Room",
+      "description": "A specific room within a visual project.",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "projectId": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string" },
+        "referenceImageUrl": { "type": "string", "description": "The 'before' photo for this room" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["tenantId", "projectId", "name", "type", "createdAt"]
+    },
+    "visual_design": {
+      "title": "Visual Design",
+      "description": "A specific design version for a room.",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "projectId": { "type": "string" },
+        "roomId": { "type": "string" },
+        "originalImageUrl": { "type": "string" },
+        "generatedImageUrl": { "type": "string" },
+        "prompt": { "type": "string" },
+        "style": { "type": "string" },
+        "notes": { "type": "string" },
+        "clientNotes": { "type": "string" },
+        "isFavorite": { "type": "boolean" },
+        "version": { "type": "number" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["tenantId", "projectId", "roomId", "originalImageUrl", "generatedImageUrl", "createdAt"]
+    },
+    "share_link": {
+      "title": "Share Link",
+      "description": "A unique link to share designs with homeowners.",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "projectId": { "type": "string" },
+        "roomId": { "type": "string" },
+        "designIds": { "type": "array", "items": { "type": "string" } },
+        "viewCount": { "type": "number" },
+        "lastViewedAt": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["tenantId", "projectId", "designIds", "createdAt"]
+    },
+    "deal": {
+      "title": "Deal",
+      "description": "A sales opportunity linked to a lead.",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "name": { "type": "string" },
+        "leadId": { "type": "string" },
+        "leadName": { "type": "string" },
+        "serviceType": { "type": "string" },
+        "stage": { "type": "string" },
+        "value": { "type": "number" },
+        "probability": { "type": "number" },
+        "assignedTo": { "type": "string" },
+        "expectedCloseDate": { "type": "string" },
+        "source": { "type": "string" },
+        "notes": { "type": "string" },
+        "priority": { "type": "string", "enum": ["low", "medium", "high", "hot"] },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "lastActivity": { "type": "string", "format": "date-time" },
+        "propertyAddress": { "type": "string" },
+        "city": { "type": "string" },
+        "state": { "type": "string" },
+        "zip": { "type": "string" },
+        "proposalAmount": { "type": "number" },
+        "depositAmount": { "type": "number" },
+        "appointmentDate": { "type": "string" },
+        "financingNeeded": { "type": "boolean" },
+        "insuranceClaim": { "type": "boolean" },
+        "lostReason": { "type": "string" }
+      },
+      "required": ["tenantId", "name", "leadId", "stage", "value", "createdAt"]
+    },
+    "estimate": {
+      "title": "Estimate",
+      "description": "A project estimate or proposal.",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "leadId": { "type": "string" },
+        "dealId": { "type": "string" },
+        "clientInfo": { "type": "object" },
+        "projectInfo": { "type": "object" },
+        "lineItems": { "type": "array" },
+        "pricing": { "type": "object" },
+        "status": { "type": "string", "enum": ["draft", "sent", "viewed", "approved", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["tenantId", "status", "createdAt"]
+    },
+    "invoice": {
+      "title": "Invoice",
+      "description": "A billing invoice for a client.",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "estimateId": { "type": "string" },
+        "leadId": { "type": "string" },
+        "clientInfo": { "type": "object" },
+        "pricing": { "type": "object" },
+        "status": { "type": "string", "enum": ["unpaid", "partially_paid", "paid", "overdue"] },
+        "dueDate": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["tenantId", "status", "createdAt"]
+    },
+    "project": {
+      "title": "Project",
+      "description": "A remodeling project in progress.",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "leadId": { "type": "string" },
+        "status": { "type": "string", "enum": ["scheduled", "in_progress", "on_hold", "completed"] },
+        "title": { "type": "string" },
+        "startDate": { "type": "string", "format": "date-time" },
+        "endDate": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["tenantId", "leadId", "status", "title", "createdAt"]
+    },
+    "payment": {
+      "title": "Payment",
+      "description": "A record of a payment received.",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "invoiceId": { "type": "string" },
+        "amount": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "completed", "failed", "refunded"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["tenantId", "invoiceId", "amount", "status", "createdAt"]
+    },
+    "automation": {
+      "title": "Automation",
+      "description": "A workflow for automating follow-ups and CRM actions.",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "trigger": { "type": "object" },
+        "conditions": { "type": "array" },
+        "steps": { "type": "array" },
+        "isActive": { "type": "boolean" },
+        "stats": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["tenantId", "name", "trigger", "isActive", "createdAt"]
+    },
+    "automation_log": {
+      "title": "Automation Log",
+      "description": "A record of an automation execution.",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "automationId": { "type": "string" },
+        "targetId": { "type": "string" },
+        "status": { "type": "string", "enum": ["running", "completed", "error", "waiting"] },
+        "currentStepIndex": { "type": "number" },
+        "stepsExecuted": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["tenantId", "automationId", "targetId", "status", "createdAt"]
+    },
+    "ad_campaign": {
+      "title": "Ad Campaign",
+      "description": "A marketing campaign for lead generation.",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "name": { "type": "string" },
+        "goal": { "type": "string", "enum": ["lead_generation", "website_traffic", "booking_appointments", "brand_awareness"] },
+        "service": { "type": "string" },
+        "location": { "type": "object" },
+        "budget": { "type": "object" },
+        "status": { "type": "string", "enum": ["draft", "active", "paused", "completed"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["tenantId", "name", "goal", "status", "createdAt"]
+    },
+    "ad_creative": {
+      "title": "Ad Creative",
+      "description": "A specific ad within a campaign.",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "campaignId": { "type": "string" },
+        "platform": { "type": "string", "enum": ["facebook", "google", "instagram", "linkedin"] },
+        "copy": { "type": "object" },
+        "media": { "type": "object" },
+        "landingPageUrl": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "paused", "archived"] },
+        "performance": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["tenantId", "campaignId", "platform", "status", "createdAt"]
+    },
+    "global_template": {
+      "title": "Global Template",
+      "description": "A reusable template for various modules (automations, ads, etc.)",
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["automation", "ad", "estimate", "website", "pipeline"] },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "content": { "type": "object" },
+        "plans": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["type", "name", "content", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/global_templates/{templateId}": {
+      "schema": "global_template",
+      "description": "System-wide templates managed by super admins."
+    },
+    "/tenants/{tenantId}": {
+      "schema": "tenant",
+      "description": "Business account data"
+    },
+    "/users/{userId}": {
+      "schema": "user",
+      "description": "User profile and tenant association"
+    },
+    "/tenants/{tenantId}/leads/{leadId}": {
+      "schema": "lead",
+      "description": "CRM leads for a specific tenant"
+    },
+    "/tenants/{tenantId}/deals/{dealId}": {
+      "schema": "deal",
+      "description": "Sales deals for a specific tenant"
+    },
+    "/tenants/{tenantId}/websites/{websiteId}": {
+      "schema": "website",
+      "description": "Website configuration for a tenant"
+    },
+    "/tenants/{tenantId}/websites/{websiteId}/pages/{pageId}": {
+      "schema": "website_page",
+      "description": "Pages within a website"
+    },
+    "/tenants/{tenantId}/websites/{websiteId}/pages/{pageId}/sections/{sectionId}": {
+      "schema": "website_section",
+      "description": "Sections within a page"
+    },
+    "/tenants/{tenantId}/testimonials/{testimonialId}": {
+      "schema": "testimonial",
+      "description": "Customer testimonials"
+    },
+    "/tenants/{tenantId}/media_assets/{assetId}": {
+      "schema": "media_asset",
+      "description": "Media assets for the content library"
+    },
+    "/tenants/{tenantId}/ai_generations/{genId}": {
+      "schema": "ai_generation",
+      "description": "AI visualizations for a tenant"
+    },
+    "/tenants/{tenantId}/visual_projects/{projectId}": {
+      "schema": "visual_project",
+      "description": "Visual projects for a tenant"
+    },
+    "/tenants/{tenantId}/visual_projects/{projectId}/rooms/{roomId}": {
+      "schema": "visual_room",
+      "description": "Rooms within a visual project"
+    },
+    "/tenants/{tenantId}/visual_projects/{projectId}/rooms/{roomId}/designs/{designId}": {
+      "schema": "visual_design",
+      "description": "Design versions for a room"
+    },
+    "/tenants/{tenantId}/share_links/{shareId}": {
+      "schema": "share_link",
+      "description": "Shareable links for homeowners"
+    },
+    "/tenants/{tenantId}/estimates/{estimateId}": {
+      "schema": "estimate",
+      "description": "Project estimates"
+    },
+    "/tenants/{tenantId}/invoices/{invoiceId}": {
+      "schema": "invoice",
+      "description": "Client invoices"
+    },
+    "/tenants/{tenantId}/projects/{projectId}": {
+      "schema": "project",
+      "description": "Remodeling projects"
+    },
+    "/tenants/{tenantId}/payments/{paymentId}": {
+      "schema": "payment",
+      "description": "Payment records"
+    },
+    "/tenants/{tenantId}/automations/{automationId}": {
+      "schema": "automation",
+      "description": "Automation workflows"
+    },
+    "/tenants/{tenantId}/automation_logs/{logId}": {
+      "schema": "automation_log",
+      "description": "Automation execution logs"
+    },
+    "/tenants/{tenantId}/ad_campaigns/{campaignId}": {
+      "schema": "ad_campaign",
+      "description": "Marketing campaigns"
+    },
+    "/tenants/{tenantId}/ad_creatives/{adId}": {
+      "schema": "ad_creative",
+      "description": "Ad creatives and performance"
+    }
+  }
+}
