@@ -118,15 +118,15 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   throw new Error(JSON.stringify(errInfo));
 }
 
-async function testConnection() {
+// Non-blocking connection test — runs after page load, never crashes the app
+setTimeout(async () => {
   try {
     await getDocFromServer(doc(db, '_connection_test_', 'ping'));
     console.log('Firebase connection successful');
   } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.error('Firebase configuration error: The client is offline.');
+    if (error instanceof Error && error.message.includes('offline')) {
+      console.warn('Firebase: client is offline.');
     }
+    // Permission denied / not-found are expected — Firestore is reachable
   }
-}
-
-testConnection();
+}, 2000);
