@@ -11,7 +11,10 @@ const REQUIRED = [
   'VITE_FIREBASE_APP_ID',
 ] as const;
 
-const missing = REQUIRED.filter((key) => !import.meta.env[key]);
+const missing = REQUIRED.filter((key) => {
+  const val = import.meta.env[key];
+  return !val || val.includes('example') || val === 'undefined';
+});
 
 if (missing.length > 0) {
   // Replace the entire page with a helpful setup guide instead of crashing silently
