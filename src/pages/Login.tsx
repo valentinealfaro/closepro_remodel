@@ -71,9 +71,8 @@ export default function Login() {
     <div className="min-h-screen bg-navy flex flex-col justify-start sm:justify-center py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
-          <Link to="/" className="flex items-center gap-2 text-white font-bold text-2xl">
-            <Layout className="text-electric" />
-            <span>ClosePro<span className="text-electric">Remodel</span></span>
+          <Link to="/">
+            <img src="/logo.png" alt="ClosePro Remodel" className="h-16 w-auto brightness-0 invert" />
           </Link>
         </div>
         <h2 className="mt-4 text-center text-2xl sm:text-3xl font-extrabold text-white">

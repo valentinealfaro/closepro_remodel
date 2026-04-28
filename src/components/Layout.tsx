@@ -57,14 +57,8 @@ export default function Layout({ children }: LayoutProps) {
       >
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link to="/" className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-navy rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-xl">C</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-navy font-bold text-xl tracking-tight leading-none">ClosePro <span className="text-blue-electric">Remodel</span></span>
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1 hidden sm:block">Built for Remodelers</span>
-              </div>
+            <Link to="/" className="flex items-center">
+              <img src="/logo.png" alt="ClosePro Remodel" className="h-14 w-auto" />
             </Link>
           </div>
 
@@ -195,11 +189,8 @@ export default function Layout({ children }: LayoutProps) {
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
             <div className="space-y-5">
-              <Link to="/" className="flex items-center gap-2">
-                <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
-                  <span className="text-navy font-bold text-xl">C</span>
-                </div>
-                <span className="text-white font-bold text-xl tracking-tight">ClosePro</span>
+              <Link to="/">
+                <img src="/logo.png" alt="ClosePro Remodel" className="h-14 w-auto brightness-0 invert" />
               </Link>
               <p className="text-gray-400 text-sm leading-relaxed">
                 The all-in-one growth platform built for remodelers. Land more $10K–$50K jobs with AI, automation, and a CRM that fits your business.
