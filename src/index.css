@@ -152,6 +152,21 @@
 }
 .btn-shimmer:active { transform: scale(0.97); }
 
+/* Widget embed button — solid, no animation, works on any site */
+.widget-btn {
+  background-color: #0a2540;
+  color: white;
+  font-weight: 700;
+  border-radius: 0.75rem;
+  transition: background-color 0.2s, transform 0.15s;
+}
+.widget-btn:hover {
+  background-color: #1E90FF;
+  transform: scale(1.02);
+}
+.widget-btn:active { transform: scale(0.97); }
+.widget-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
 /* Gradient mesh background */
 .mesh-bg {
   background: radial-gradient(ellipse at top left, rgba(30,144,255,0.15) 0%, transparent 50%),

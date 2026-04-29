@@ -262,7 +262,7 @@ export default function Widget() {
               </div>
 
               <button onClick={() => setStep('configure')} disabled={!previewUrl}
-                className="btn-shimmer w-full py-4 rounded-xl font-black text-base flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
+                className="widget-btn w-full py-4 rounded-xl font-black text-base flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
                 Next: Choose Your Style <ArrowRight size={20} />
               </button>
             </motion.div>
@@ -338,7 +338,7 @@ export default function Widget() {
               <div className="flex gap-3">
                 <button onClick={() => setStep('upload')} className="px-5 py-3 border border-gray-200 rounded-xl font-bold text-navy text-sm hover:bg-gray-50">← Back</button>
                 <button onClick={runGeneration}
-                  className="btn-shimmer flex-1 py-3 rounded-xl font-black text-base flex items-center justify-center gap-2">
+                  className="widget-btn flex-1 py-3 rounded-xl font-black text-base flex items-center justify-center gap-2">
                   <Wand2 size={20} /> Generate My Remodel
                 </button>
               </div>
@@ -384,7 +384,7 @@ export default function Widget() {
                   <h2 className="text-xl font-black text-navy">Generation Issue</h2>
                   <p className="text-gray-500 text-sm max-w-sm mx-auto">{errorMsg}</p>
                   <div className="flex gap-3 justify-center">
-                    <button onClick={runGeneration} className="btn-shimmer px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2"><RefreshCw size={14} /> Try Again</button>
+                    <button onClick={runGeneration} className="widget-btn px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2"><RefreshCw size={14} /> Try Again</button>
                     <button onClick={() => setStep('upload')} className="px-5 py-2.5 border border-gray-200 rounded-xl font-bold text-sm text-navy hover:bg-gray-50">Upload New Photo</button>
                   </div>
                 </div>
@@ -426,7 +426,7 @@ export default function Widget() {
                       <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Phone number (optional)"
                         className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-electric" />
                       <button type="submit" disabled={submitting}
-                        className="btn-shimmer w-full py-3.5 rounded-xl font-black flex items-center justify-center gap-2 disabled:opacity-60">
+                        className="widget-btn w-full py-3.5 rounded-xl font-black flex items-center justify-center gap-2 disabled:opacity-60">
                         <Lock size={16} /> {submitting ? 'Saving...' : 'Unlock My Free Result'}
                       </button>
                     </form>
@@ -449,7 +449,7 @@ export default function Widget() {
 
               <div className="flex flex-wrap justify-center gap-3">
                 <a href={resultSrc!} download={`${name.replace(/\s+/g, '-')}-remodel.jpg`}
-                  className="btn-shimmer px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2">
+                  className="widget-btn px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2">
                   <Download size={16} /> Download HD
                 </a>
                 <button onClick={() => { setStep('upload'); setUploadedFile(null); setPreviewUrl(null); setResultSrc(null); }}
