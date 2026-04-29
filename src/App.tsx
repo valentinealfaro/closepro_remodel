@@ -14,6 +14,7 @@ import FAQ from './pages/FAQ';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
 import NotFound from './pages/NotFound';
+import AiDemo from './pages/AiDemo';
 import IndustryLanding from './pages/IndustryLanding';
 import ShareView from './pages/ShareView';
 import Login from './pages/Login';
@@ -57,6 +58,7 @@ export default function App() {
             <Route path="/faq" element={<Layout><FAQ /></Layout>} />
             <Route path="/privacy" element={<Layout><Privacy /></Layout>} />
             <Route path="/terms" element={<Layout><Terms /></Layout>} />
+            <Route path="/ai-demo" element={<Layout><AiDemo /></Layout>} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/share/:shareId" element={<ShareView />} />

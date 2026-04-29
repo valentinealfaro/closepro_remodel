@@ -2,54 +2,61 @@ import { CheckCircle2, ChevronRight, XCircle, Minus, Info, ArrowRight, Star, Shi
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Helmet } from 'react-helmet-async';
+import { useState } from 'react';
 
 export default function Pricing() {
+  const [annual, setAnnual] = useState(false);
+
   const plans = [
     {
       name: "Starter",
-      price: "499",
+      monthlyPrice: 97,
       label: "Best For Solo Remodelers",
-      outcome: "Get your first consistent lead system in place",
+      outcome: "Get your first lead system live in 7 days",
       desc: "Perfect for solo remodelers just getting started with automation.",
       features: [
         "High-converting lead capture website",
-        "Basic contractor CRM pipeline",
-        "AI visualizer (limited usage)",
+        "Basic contractor CRM (up to 100 leads)",
+        "AI visualizer (10 generations/month)",
         "Automated email follow-ups",
-        "Standard support"
+        "Demo booking calendar",
+        "Standard email support"
       ],
-      note: "Ideal for contractors just getting started with systems",
-      cta: "Get Started"
+      note: "One extra $1,000 job covers 10 months",
+      cta: "Start Free Trial"
     },
     {
-      name: "Professional",
-      price: "999",
+      name: "Growth",
+      monthlyPrice: 197,
       label: "MOST POPULAR",
-      outcome: "Built to help you consistently close $10K–$50K jobs",
+      outcome: "Close $10K–$50K jobs on autopilot",
       desc: "Our most popular plan for growing remodeling companies.",
       features: [
         "Everything in Starter",
-        "Full CRM system (pipeline + tracking)",
-        "Unlimited AI remodel visualizer",
-        "SMS + email automation",
+        "Full CRM pipeline + deal tracking",
+        "Unlimited AI remodel visualizations",
+        "SMS + email automation sequences",
         "Estimates & invoice system",
+        "Project management tools",
         "Priority support"
       ],
       popular: true,
-      highlight: "Best Value — Designed for serious remodelers ready to scale",
-      cta: "Get Started"
+      highlight: "Best Value — One extra job/month pays for itself 10x over",
+      cta: "Start Free Trial"
     },
     {
-      name: "Enterprise",
-      price: "Custom",
-      label: "For Large Teams",
-      outcome: "For high-volume remodelers and growing teams",
-      desc: "For large remodeling firms with multiple sales teams.",
+      name: "Pro",
+      monthlyPrice: 497,
+      label: "For Scaling Teams",
+      outcome: "Full SaaS platform for high-volume remodelers",
+      desc: "For remodeling firms ready to dominate their market.",
       features: [
-        "Everything in Professional",
-        "Multi-user team access",
-        "Advanced reporting & analytics",
-        "Custom integrations",
+        "Everything in Growth",
+        "Multi-user team access (up to 10 seats)",
+        "AI-powered ad copy generator",
+        "SEO blog content system",
+        "Advanced analytics & reporting",
+        "Embeddable AI widget for your website",
         "Dedicated account manager",
         "White-glove onboarding"
       ],
@@ -123,80 +130,93 @@ export default function Pricing() {
       </section>
 
       {/* Pricing Cards */}
-      <section className="py-24 -mt-12 relative z-20">
+      <section className="py-16 -mt-12 relative z-20">
+        {/* Annual toggle */}
+        <div className="flex justify-center mb-10">
+          <div className="bg-gray-100 rounded-full p-1 flex items-center gap-1">
+            <button onClick={() => setAnnual(false)}
+              className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${!annual ? 'bg-white text-navy shadow-sm' : 'text-gray-400'}`}>
+              Monthly
+            </button>
+            <button onClick={() => setAnnual(true)}
+              className={`px-6 py-2 rounded-full text-sm font-bold transition-all flex items-center gap-2 ${annual ? 'bg-white text-navy shadow-sm' : 'text-gray-400'}`}>
+              Annual
+              <span className="bg-green-500 text-white text-xs font-black px-2 py-0.5 rounded-full">Save 20%</span>
+            </button>
+          </div>
+        </div>
+
         <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-3 gap-8 items-start">
-          {plans.map((plan, i) => (
-            <motion.div 
-              key={i}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
-              whileHover={{ y: -10, boxShadow: "0 25px 50px -12px rgb(0 0 0 / 0.15)" }}
-              className={`p-10 rounded-[2.5rem] border bg-white flex flex-col h-full transition-all relative ${
-                plan.popular 
-                  ? 'border-blue-electric ring-4 ring-blue-electric/10 scale-105 lg:scale-110 z-10' 
-                  : 'border-gray-100 shadow-xl'
-              }`}
-            >
-              {plan.popular && (
-                <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-blue-electric text-white px-6 py-2 rounded-full text-sm font-black uppercase tracking-widest shadow-lg">
-                  {plan.label}
-                </div>
-              )}
-              
-              {!plan.popular && (
-                <div className="text-blue-electric font-bold text-xs uppercase tracking-widest mb-4">
-                  {plan.label}
-                </div>
-              )}
-
-              <div className="mb-8">
-                <h3 className="text-3xl font-bold text-navy mb-2">{plan.name}</h3>
-                <p className="text-blue-electric font-bold text-sm leading-tight">{plan.outcome}</p>
-              </div>
-
-              <div className="flex items-baseline gap-1 mb-8">
-                <span className="text-3xl font-bold text-navy">{plan.price === 'Custom' ? '' : '$'}</span>
-                <span className="text-7xl font-black text-navy tracking-tighter">{plan.price}</span>
-                <span className="text-gray-400 font-bold">{plan.price === 'Custom' ? '' : '/mo'}</span>
-              </div>
-
-              {plan.highlight && (
-                <div className="bg-blue-electric/5 border border-blue-electric/10 p-4 rounded-2xl mb-8 flex items-start gap-3">
-                  <Star className="text-blue-electric shrink-0" size={20} />
-                  <p className="text-sm font-bold text-navy leading-snug">{plan.highlight}</p>
-                </div>
-              )}
-
-              <ul className="space-y-4 mb-10 flex-grow">
-                {plan.features.map((feature, j) => (
-                  <li key={j} className="flex items-start gap-3 text-sm text-gray-600 font-medium">
-                    <CheckCircle2 className="text-blue-electric shrink-0 mt-0.5" size={18} />
-                    {feature}
-                  </li>
-                ))}
-              </ul>
-
-              <div className="space-y-4">
-                <Link
-                  to={plan.price === 'Custom' ? '/contact' : `/signup?plan=${plan.name.toLowerCase()}`}
-                  className={`w-full py-5 rounded-2xl font-black text-center block transition-all text-lg ${
-                    plan.popular 
-                      ? 'bg-blue-electric text-white hover:bg-navy shadow-xl shadow-blue-electric/30' 
-                      : 'bg-navy text-white hover:bg-blue-electric'
-                  }`}
-                >
-                  {plan.cta}
-                </Link>
-                {plan.note && (
-                  <p className="text-center text-xs text-gray-400 font-medium italic">
-                    {plan.note}
-                  </p>
+          {plans.map((plan, i) => {
+            const displayPrice = annual ? Math.round(plan.monthlyPrice * 0.8) : plan.monthlyPrice;
+            return (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                whileHover={{ y: -8 }}
+                className={`p-10 rounded-[2.5rem] border bg-white flex flex-col h-full transition-all relative shadow-lg ${
+                  plan.popular
+                    ? 'border-blue-electric ring-4 ring-blue-electric/10 lg:scale-105 z-10'
+                    : 'border-gray-100'
+                }`}
+              >
+                {plan.popular && (
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 btn-shimmer px-6 py-1.5 rounded-full text-xs font-black uppercase tracking-widest shadow-lg">
+                    {plan.label}
+                  </div>
                 )}
-              </div>
-            </motion.div>
-          ))}
+                {!plan.popular && (
+                  <div className="text-blue-electric font-bold text-xs uppercase tracking-widest mb-4">{plan.label}</div>
+                )}
+
+                <div className="mb-6">
+                  <h3 className="text-3xl font-bold text-navy mb-1">{plan.name}</h3>
+                  <p className="text-blue-electric font-bold text-sm">{plan.outcome}</p>
+                </div>
+
+                <div className="flex items-baseline gap-1 mb-2">
+                  <span className="text-3xl font-bold text-navy">$</span>
+                  <span className="text-7xl font-black text-navy tracking-tighter">{displayPrice}</span>
+                  <span className="text-gray-400 font-bold">/mo</span>
+                </div>
+                {annual && <p className="text-green-500 text-xs font-bold mb-6">Billed annually — saving ${(plan.monthlyPrice - displayPrice) * 12}/year</p>}
+                {!annual && <p className="text-gray-400 text-xs mb-6">or ${Math.round(plan.monthlyPrice * 0.8)}/mo billed annually</p>}
+
+                {plan.highlight && (
+                  <div className="bg-blue-electric/5 border border-blue-electric/10 p-4 rounded-2xl mb-6 flex items-start gap-3">
+                    <Star className="text-blue-electric shrink-0" size={18} />
+                    <p className="text-sm font-bold text-navy leading-snug">{plan.highlight}</p>
+                  </div>
+                )}
+
+                <ul className="space-y-3 mb-8 flex-grow">
+                  {plan.features.map((feature, j) => (
+                    <li key={j} className="flex items-start gap-3 text-sm text-gray-600 font-medium">
+                      <CheckCircle2 className="text-blue-electric shrink-0 mt-0.5" size={16} />
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="space-y-3">
+                  <Link
+                    to={plan.name === 'Pro' ? '/contact' : `/signup?plan=${plan.name.toLowerCase()}`}
+                    className={`w-full py-4 rounded-2xl font-black text-center block transition-all ${
+                      plan.popular
+                        ? 'bg-blue-electric text-white hover:bg-navy shadow-xl shadow-blue-electric/30'
+                        : 'bg-navy text-white hover:bg-blue-electric'
+                    }`}
+                  >
+                    {plan.cta}
+                  </Link>
+                  {plan.note && <p className="text-center text-xs text-green-600 font-bold">{plan.note}</p>}
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
         
         <div className="mt-16 text-center space-y-8">
@@ -275,9 +295,9 @@ export default function Pricing() {
               <thead>
                 <tr className="border-b-2 border-gray-100">
                   <th className="py-6 px-4 text-left text-navy font-black text-lg">Feature</th>
-                  <th className="py-6 px-4 text-center text-navy font-bold">Starter</th>
-                  <th className="py-6 px-4 text-center text-blue-electric font-black bg-blue-electric/5 rounded-t-2xl">Professional</th>
-                  <th className="py-6 px-4 text-center text-navy font-bold">Enterprise</th>
+                  <th className="py-6 px-4 text-center text-navy font-bold">Starter <span className="block text-xs font-normal text-gray-400">$97/mo</span></th>
+                  <th className="py-6 px-4 text-center text-blue-electric font-black bg-blue-electric/5 rounded-t-2xl">Growth <span className="block text-xs font-normal text-blue-electric">$197/mo</span></th>
+                  <th className="py-6 px-4 text-center text-navy font-bold">Pro <span className="block text-xs font-normal text-gray-400">$497/mo</span></th>
                 </tr>
               </thead>
               <tbody>

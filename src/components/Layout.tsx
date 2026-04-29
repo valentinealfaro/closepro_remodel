@@ -39,7 +39,6 @@ export default function Layout({ children }: LayoutProps) {
     { name: 'Pricing', href: '/pricing' },
     { name: 'Results', href: '/results' },
     { name: 'Blog', href: '/blog' },
-    { name: 'Contact', href: '/contact' },
   ];
 
   return (
@@ -73,17 +72,20 @@ export default function Layout({ children }: LayoutProps) {
                 {link.name}
               </Link>
             ))}
-            <div className="flex items-center gap-4 border-l border-gray-200 pl-8">
-              <div className="hidden xl:flex items-center gap-2 text-navy/60 hover:text-blue-electric transition-colors cursor-pointer">
-                <Phone size={16} />
-                <span className="text-sm font-bold">(800) 555-0123</span>
-              </div>
-              <Link 
-                to="/book-demo" 
-                className="btn-primary py-2 px-6 text-sm"
+            <div className="flex items-center gap-3 border-l border-gray-200 pl-6">
+              <Link
+                to="/ai-demo"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-blue-electric/10 border border-blue-electric/20 text-blue-electric text-sm font-bold hover:bg-blue-electric hover:text-white transition-all"
+                onClick={() => trackEvent('nav_ai_demo_click')}
+              >
+                <Zap size={13} fill="currentColor" /> Try AI Free
+              </Link>
+              <Link
+                to="/book-demo"
+                className="btn-primary py-2 px-5 text-sm"
                 onClick={() => trackEvent('header_cta_click', { location: 'desktop_nav' })}
               >
-                Book My Demo
+                Book Demo
               </Link>
             </div>
           </nav>
