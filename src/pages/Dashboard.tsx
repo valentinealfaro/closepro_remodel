@@ -24,7 +24,10 @@ import {
   Building2,
   Save,
   ChevronRight,
-  Bot
+  Bot,
+  CheckCircle2,
+  Circle,
+  PartyPopper
 } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
@@ -356,6 +359,97 @@ const AccountSettings = () => {
   );
 };
 
+// ─── Onboarding Checklist ──────────────────────────────────────────────────
+
+const ONBOARDING_STEPS = [
+  { id: 'profile',    label: 'Complete your business profile',      link: '/app/settings',    icon: '👤' },
+  { id: 'lead',       label: 'Add your first lead',                 link: '/app/leads',       icon: '👥' },
+  { id: 'automation', label: 'Set up an automation sequence',       link: '/app/automation',  icon: '⚡' },
+  { id: 'visualizer', label: 'Try the AI Visualizer',               link: '/app/visualizer',  icon: '🤖' },
+  { id: 'estimate',   label: 'Create your first estimate',          link: '/app/estimates',   icon: '📄' },
+  { id: 'website',    label: 'Customize your contractor website',   link: '/app/website',     icon: '🌐' },
+];
+
+const OnboardingChecklist = () => {
+  const STORAGE_KEY = 'cp_onboarding_v1';
+  const [completed, setCompleted] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { return []; }
+  });
+  const [dismissed, setDismissed] = useState(() => localStorage.getItem('cp_onboarding_dismissed') === '1');
+
+  const toggle = (id: string) => {
+    setCompleted(prev => {
+      const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const dismiss = () => {
+    localStorage.setItem('cp_onboarding_dismissed', '1');
+    setDismissed(true);
+  };
+
+  const doneCount = completed.length;
+  const total = ONBOARDING_STEPS.length;
+  const allDone = doneCount === total;
+
+  if (dismissed) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`mb-6 rounded-2xl border p-5 relative ${allDone ? 'bg-green-50 border-green-200' : 'bg-blue-50 border-blue-100'}`}
+    >
+      <button onClick={dismiss} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors">
+        <X size={16} />
+      </button>
+      <div className="flex items-center gap-3 mb-4">
+        {allDone
+          ? <PartyPopper size={22} className="text-green-500" />
+          : <Zap size={22} className="text-blue-electric" />}
+        <div>
+          <h3 className="font-bold text-navy text-sm">
+            {allDone ? 'Setup Complete! You\'re ready to close jobs.' : `Get set up — ${doneCount} of ${total} done`}
+          </h3>
+          {!allDone && (
+            <div className="flex items-center gap-2 mt-1">
+              <div className="flex-1 h-1.5 bg-blue-200 rounded-full overflow-hidden w-40">
+                <div className="h-full bg-blue-electric rounded-full transition-all" style={{ width: `${(doneCount / total) * 100}%` }} />
+              </div>
+              <span className="text-xs text-blue-electric font-bold">{Math.round((doneCount / total) * 100)}%</span>
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {ONBOARDING_STEPS.map(step => {
+          const done = completed.includes(step.id);
+          return (
+            <div key={step.id} className="flex items-center gap-3 group">
+              <button onClick={() => toggle(step.id)} className="shrink-0">
+                {done
+                  ? <CheckCircle2 size={18} className="text-green-500" />
+                  : <Circle size={18} className="text-gray-300 group-hover:text-blue-electric transition-colors" />}
+              </button>
+              <Link to={step.link}
+                className={`text-sm font-medium flex items-center gap-1.5 ${done ? 'line-through text-gray-400' : 'text-navy hover:text-blue-electric'} transition-colors`}>
+                <span>{step.icon}</span> {step.label}
+              </Link>
+            </div>
+          );
+        })}
+      </div>
+      {allDone && (
+        <div className="mt-4 flex gap-3">
+          <button onClick={dismiss} className="text-xs font-bold text-green-600 hover:underline">Dismiss checklist</button>
+        </div>
+      )}
+    </motion.div>
+  );
+};
+
 // ─── Dashboard Overview ────────────────────────────────────────────────────
 
 const Overview = () => {
@@ -374,6 +468,9 @@ const Overview = () => {
         <h1 className="text-2xl font-bold text-navy">Dashboard Overview</h1>
         <p className="text-sm text-gray-500 mt-1">Welcome back, {userData?.displayName || 'there'}!</p>
       </div>
+
+      {/* Onboarding Checklist */}
+      <OnboardingChecklist />
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -561,6 +658,7 @@ export default function Dashboard() {
   const navItems = (isSuperAdmin && !isImpersonating)
     ? [
         { to: '/app', icon: ShieldCheck, label: 'Super Admin Dashboard' },
+        { to: '/app/agents', icon: Bot, label: 'AI Agents' },
         { to: '/app/settings', icon: Settings, label: 'System Settings' },
       ]
     : [
@@ -572,7 +670,6 @@ export default function Dashboard() {
         { to: '/app/projects', icon: BriefcaseIcon, label: 'Projects' },
         { to: '/app/marketing', icon: Megaphone, label: 'Marketing' },
         { to: '/app/visualizer', icon: ImageIcon, label: 'AI Visualizer' },
-        { to: '/app/agents', icon: Bot, label: 'AI Agents' },
         { to: '/app/website', icon: Globe, label: 'Website' },
         { to: '/app/automation', icon: Zap, label: 'Automation' },
         { to: '/app/settings', icon: Settings, label: 'Settings' },

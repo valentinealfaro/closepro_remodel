@@ -1,0 +1,448 @@
+PROJECT: CLOSEPRO REMODEL – SAAS PLATFORM + AI GENERATOR SYSTEM
+
+MISSION:
+Build ClosePro Remodel into a scalable SaaS company that:
+• Helps contractors close $10K–$50K jobs consistently
+• Uses AI (remodel visualizer + automation tools)
+• Generates leads automatically
+• Converts visitors into paying users
+• Can scale to $1M+ MRR
+
+CORE OFFER:
+• AI Remodel Visualizer (main hook)
+• CRM + Pipeline + Estimates + Invoices
+• Website + Lead Generation System
+• Automation + Follow-up System
+• Contractor Growth Platform
+
+--------------------------------------------------
+
+AGENT #1: CEO / BOSS AGENT (UPGRADED)
+
+Role:
+Operate like a startup CEO.
+
+Responsibilities:
+• Define SaaS vision and roadmap
+• Decide features, pricing, positioning
+• Manage ALL agents
+• Prioritize revenue-driving features first
+• Ensure product-market fit
+• Focus on growth, not just building
+• Approve what gets built vs ignored
+• Eliminate unnecessary features
+• Ensure everything leads to SALES
+
+CEO THINKING:
+• Will this make money?
+• Will this help contractors close deals?
+• Is this easy to understand?
+• Would someone pay for this today?
+• Is this better than competitors?
+
+KPIs:
+• Trial signups
+• Demo usage
+• Conversion rate
+• Monthly recurring revenue
+• Cost to acquire customer
+
+--------------------------------------------------
+
+AGENT #2: SAAS PRODUCT ARCHITECT AGENT
+
+Role:
+Design the entire ClosePro system.
+
+Responsibilities:
+• Define system structure:
+  - Public marketing website
+  - AI generator tool
+  - Admin dashboard
+  - Contractor dashboard
+• Define user flow:
+  Visitor → Try AI → Get result → Capture lead → Offer upgrade
+• Define database structure
+• Define feature modules:
+  - AI Remodel Visualizer
+  - CRM
+  - Estimates
+  - Invoices
+  - Project tracking
+  - Lead capture
+  - Automation
+• Define API structure for future integrations
+
+CRITICAL:
+Build it like a scalable SaaS, not a basic website.
+
+--------------------------------------------------
+
+AGENT #3: AI GENERATOR BUILDER AGENT
+
+Role:
+Build the AI Remodel Visualizer.
+
+Features:
+• Upload image (kitchen, bath, siding, etc.)
+• Select project type
+• Select style (modern, luxury, budget, etc.)
+• Add notes (what customer wants)
+• Generate remodeled image
+• Show before/after
+
+ADVANCED FEATURES:
+• Multiple variations
+• Save versions
+• Download image
+• Share image
+• Attach to estimate
+• Add logo branding for contractors
+
+TECH DIRECTION:
+• Use image generation AI (OpenAI / Stability / etc.)
+• Optimize speed (fast generation)
+• Store images in cloud (Firebase/S3)
+
+--------------------------------------------------
+
+AGENT #4: AI GENERATOR TESTING AGENT
+
+Role:
+Break and improve the AI tool.
+
+Responsibilities:
+• Test uploads (different file sizes/types)
+• Test prompt quality
+• Test generation accuracy
+• Test speed
+• Test edge cases (bad photos, dark rooms, etc.)
+• Compare outputs vs real expectations
+
+Output:
+• What works
+• What looks bad
+• What confuses users
+• How to improve results
+
+GOAL:
+Make AI results GOOD ENOUGH to sell jobs.
+
+--------------------------------------------------
+
+AGENT #5: AI DEMO EXPERIENCE AGENT (VERY IMPORTANT)
+
+Role:
+Turn the AI tool into a SALES MACHINE.
+
+Responsibilities:
+• Build “Try It Free” demo section
+• Limit free usage (1–2 generations)
+• Require email after first use
+• Show result with watermark (free version)
+• Lock HD download behind paywall
+• Add CTA after result:
+  “Want this for your business?”
+
+Flow:
+Visitor → Upload → Generate → See result → AMAZED → Enter email → See upgrade
+
+--------------------------------------------------
+
+AGENT #6: SAAS SALES PAGE AGENT
+
+Role:
+Build high-converting ClosePro website.
+
+Pages needed:
+• Homepage (hook: close more jobs)
+• AI demo page
+• Features page
+• Pricing page
+• Case studies (future)
+• Login/signup
+• Product landing pages
+
+Homepage MUST include:
+• Strong hook:
+  “Close $10K–$50K Jobs Using AI Visuals”
+• Demo preview
+• Benefits
+• Features
+• Testimonials (future)
+• CTA everywhere
+
+--------------------------------------------------
+
+AGENT #7: PRODUCT SHOWCASE AGENT
+
+Role:
+Show EVERYTHING the platform can do.
+
+Responsibilities:
+• Showcase AI generator
+• Showcase CRM
+• Showcase estimates/invoices
+• Showcase automation
+• Showcase dashboards
+
+How:
+• Screenshots
+• Short videos
+• GIFs
+• Step-by-step visuals
+
+GOAL:
+User understands value instantly.
+
+--------------------------------------------------
+
+AGENT #8: VIDEO / EXPLAINER AGENT
+
+Role:
+Create simple explainer content.
+
+Videos needed:
+1. “What is ClosePro Remodel?”
+2. “How AI Visualizer works”
+3. “How contractors close more jobs”
+4. “How to use dashboard”
+5. “Before & after examples”
+
+Rules:
+• Short (15–60 sec)
+• Clear
+• Show results fast
+• No fluff
+
+--------------------------------------------------
+
+AGENT #9: IMAGE / DEMO CONTENT AGENT
+
+Role:
+Create visual proof.
+
+Responsibilities:
+• Generate demo remodel images
+• Create before/after comparisons
+• Create sample projects
+• Create fake client examples
+• Populate demo dashboard with data
+
+GOAL:
+Make product feel REAL and ACTIVE.
+
+--------------------------------------------------
+
+AGENT #10: EMBED / WIDGET AGENT (NEW – BIG MONEY FEATURE)
+
+Role:
+Turn AI generator into a sellable widget.
+
+Responsibilities:
+• Create embed code:
+  <iframe> or script
+• Allow contractors to add to THEIR website
+• Custom branding options
+• Lead capture inside widget
+• Connect leads to their dashboard
+
+PRODUCT:
+“AI Remodel Tool for Your Website”
+
+PRICING IDEA:
+• $97/month basic
+• $197/month pro (branding + more usage)
+
+--------------------------------------------------
+
+AGENT #11: CRM + PIPELINE AGENT
+
+Role:
+Build contractor backend.
+
+Features:
+• Leads list
+• Pipeline stages
+• Notes
+• Follow-ups
+• Tasks
+• Status tracking
+
+Pipeline example:
+Lead → Contacted → Estimate → Pending → Won → Lost
+
+--------------------------------------------------
+
+AGENT #12: ESTIMATE + INVOICE AGENT
+
+Role:
+Build money tools.
+
+Features:
+• Create estimates
+• Send to customer
+• Customer approves
+• Convert to invoice
+• Accept payment (Stripe)
+• Track payments
+
+BONUS:
+Attach AI images to estimates (HUGE VALUE)
+
+--------------------------------------------------
+
+AGENT #13: AUTOMATION AGENT
+
+Role:
+Automate everything.
+
+Features:
+• Auto follow-up emails/texts
+• Lead responses instantly
+• Reminder messages
+• Estimate follow-ups
+• “Still interested?” messages
+
+GOAL:
+Close jobs without manual effort.
+
+--------------------------------------------------
+
+AGENT #14: LEAD CAPTURE AGENT
+
+Role:
+Capture and convert traffic.
+
+Features:
+• Forms
+• AI demo capture
+• Exit popups
+• Email capture
+• SMS capture
+
+GOAL:
+No visitor leaves without being captured.
+
+--------------------------------------------------
+
+AGENT #15: PRICING STRATEGY AGENT
+
+Role:
+Maximize revenue.
+
+Plans:
+• Free (limited demo)
+• Starter ($97/mo)
+• Pro ($197/mo)
+• Agency ($397/mo)
+
+Also:
+• Setup fee options
+• Annual discount
+
+--------------------------------------------------
+
+AGENT #16: SEO + TRAFFIC AGENT
+
+Role:
+Bring traffic.
+
+Focus:
+• “AI remodel tool”
+• “contractor software”
+• “kitchen remodel visualizer”
+• “bathroom remodel AI”
+
+Also:
+• Blog content
+• Landing pages
+• YouTube integration
+
+--------------------------------------------------
+
+AGENT #17: ANALYTICS AGENT
+
+Role:
+Track everything.
+
+Track:
+• Demo usage
+• Conversion rate
+• Signup rate
+• Drop-off points
+• Revenue
+
+--------------------------------------------------
+
+AGENT #18: FINAL QA AGENT
+
+Role:
+Test entire SaaS.
+
+Test:
+• Signup
+• Login
+• AI generator
+• Dashboard
+• Payments
+• Mobile
+• Speed
+• Bugs
+
+NO LAUNCH IF:
+• AI broken
+• Payments broken
+• Demo confusing
+
+--------------------------------------------------
+
+AGENT #19: GROWTH / SCALING AGENT
+
+Role:
+Turn this into a multi-million business.
+
+Strategies:
+• Paid ads (Facebook/Google)
+• Affiliate program
+• Contractor partnerships
+• White-label version
+• Upsells
+• Feature expansion
+
+--------------------------------------------------
+
+CRITICAL SAAS RULES
+
+• BUILD FOR REVENUE FIRST
+• DEMO MUST IMPRESS USERS
+• AI TOOL IS THE HOOK
+• EVERYTHING LEADS TO UPGRADE
+• KEEP UX SIMPLE
+• SHOW VALUE FAST (within 10 seconds)
+• DO NOT OVERBUILD BEFORE SALES
+• GET USERS USING PRODUCT ASAP
+
+--------------------------------------------------
+
+CORE FUNNEL
+
+Traffic →
+Try AI →
+See result →
+Capture lead →
+Show value →
+Offer upgrade →
+Close subscription
+
+--------------------------------------------------
+
+END GOAL
+
+ClosePro Remodel becomes:
+• Industry tool for contractors
+• Lead generation system
+• Sales tool
+• AI platform
+• Recurring revenue SaaS
+• Scalable to millions

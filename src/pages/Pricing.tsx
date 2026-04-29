@@ -1,87 +1,119 @@
-import { CheckCircle2, ChevronRight, XCircle, Minus, Info, ArrowRight, Star, ShieldCheck, TrendingUp, Zap } from 'lucide-react';
+import { CheckCircle2, ChevronRight, XCircle, Minus, Info, ArrowRight, Star, ShieldCheck, TrendingUp, Zap, Crown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Helmet } from 'react-helmet-async';
 import { useState } from 'react';
 
+const plans = [
+  {
+    name: "Launchpad",
+    monthlyPrice: 99,
+    label: "For Solo Remodelers",
+    revenueStage: "$200K–$500K/yr",
+    outcome: "Get your first lead system live in 7 days",
+    desc: "Perfect for solo remodelers getting started with automation and lead capture.",
+    features: [
+      "High-converting lead capture website",
+      "Basic contractor CRM (up to 150 leads)",
+      "AI visualizer (15 generations/month)",
+      "Automated email follow-ups (5-touch)",
+      "Demo booking calendar",
+      "Mobile job tracker",
+      "Standard email support"
+    ],
+    note: "One extra $1,500 job covers 15 months",
+    cta: "Start Free Trial",
+    color: "border-gray-100"
+  },
+  {
+    name: "Accelerator",
+    monthlyPrice: 229,
+    label: "MOST POPULAR",
+    revenueStage: "$500K–$1M/yr",
+    outcome: "Close $10K–$50K jobs on autopilot",
+    desc: "Our most popular plan for remodelers ready to scale past $500K.",
+    features: [
+      "Everything in Launchpad",
+      "Full CRM pipeline + deal tracking",
+      "Unlimited AI remodel visualizations",
+      "SMS + email automation sequences",
+      "Estimates & invoice system",
+      "Project management tools",
+      "Google Review automation",
+      "Priority support (same-day)"
+    ],
+    popular: true,
+    highlight: "Best Value — One extra job/month pays for itself 10x over",
+    cta: "Start Free Trial",
+    color: "border-blue-electric"
+  },
+  {
+    name: "Catalyst",
+    monthlyPrice: 499,
+    label: "For Scaling Teams",
+    revenueStage: "$1M–$1.5M/yr",
+    outcome: "Dominate your local market with AI + automation",
+    desc: "For remodeling firms ready to dominate their local market.",
+    features: [
+      "Everything in Accelerator",
+      "Multi-user team access (up to 5 seats)",
+      "AI-powered ad copy generator",
+      "SEO blog content system",
+      "Advanced analytics & reporting",
+      "Embeddable AI widget for your website",
+      "Dedicated account manager",
+      "White-glove onboarding call"
+    ],
+    cta: "Start Free Trial",
+    color: "border-gray-100"
+  },
+  {
+    name: "Apex",
+    monthlyPrice: 749,
+    label: "Enterprise Growth",
+    revenueStage: "$1.5M–$2M+/yr",
+    outcome: "Full-scale revenue engine for high-volume remodelers",
+    desc: "The complete system for high-volume remodeling firms scaling past $1.5M.",
+    features: [
+      "Everything in Catalyst",
+      "Unlimited team seats",
+      "Custom AI training on your portfolio",
+      "Multi-location management",
+      "API access & custom integrations",
+      "Quarterly growth strategy calls",
+      "White-label reports for clients",
+      "24/7 dedicated support line"
+    ],
+    apex: true,
+    cta: "Contact Sales",
+    color: "border-amber-400"
+  }
+];
+
+const comparisonRows = [
+  { label: "Lead Capture Website", launchpad: "✔", accelerator: "✔", catalyst: "✔", apex: "✔" },
+  { label: "CRM System", launchpad: "Basic (150)", accelerator: "Full Pipeline", catalyst: "Advanced", apex: "Unlimited" },
+  { label: "AI Visualizer", launchpad: "15/mo", accelerator: "Unlimited", catalyst: "Unlimited", apex: "Custom-Trained" },
+  { label: "SMS Automation", launchpad: "✖", accelerator: "✔", catalyst: "✔", apex: "✔" },
+  { label: "Email Sequences", launchpad: "5-touch", accelerator: "Full 14-day", catalyst: "Full 14-day", apex: "Custom" },
+  { label: "Estimates & Invoices", launchpad: "✖", accelerator: "✔", catalyst: "✔", apex: "✔" },
+  { label: "Booking System", launchpad: "✔", accelerator: "✔", catalyst: "✔", apex: "✔" },
+  { label: "Reporting Dashboard", launchpad: "Basic", accelerator: "Advanced", catalyst: "Custom", apex: "White-Label" },
+  { label: "Team Seats", launchpad: "1", accelerator: "1", catalyst: "Up to 5", apex: "Unlimited" },
+  { label: "AI Ad Copy Generator", launchpad: "✖", accelerator: "✖", catalyst: "✔", apex: "✔" },
+  { label: "SEO Blog System", launchpad: "✖", accelerator: "✖", catalyst: "✔", apex: "✔" },
+  { label: "API Access", launchpad: "✖", accelerator: "✖", catalyst: "✖", apex: "✔" },
+  { label: "Support Level", launchpad: "Email", accelerator: "Priority", catalyst: "Dedicated", apex: "24/7 Line" },
+];
+
 export default function Pricing() {
   const [annual, setAnnual] = useState(false);
-
-  const plans = [
-    {
-      name: "Starter",
-      monthlyPrice: 97,
-      label: "Best For Solo Remodelers",
-      outcome: "Get your first lead system live in 7 days",
-      desc: "Perfect for solo remodelers just getting started with automation.",
-      features: [
-        "High-converting lead capture website",
-        "Basic contractor CRM (up to 100 leads)",
-        "AI visualizer (10 generations/month)",
-        "Automated email follow-ups",
-        "Demo booking calendar",
-        "Standard email support"
-      ],
-      note: "One extra $1,000 job covers 10 months",
-      cta: "Start Free Trial"
-    },
-    {
-      name: "Growth",
-      monthlyPrice: 197,
-      label: "MOST POPULAR",
-      outcome: "Close $10K–$50K jobs on autopilot",
-      desc: "Our most popular plan for growing remodeling companies.",
-      features: [
-        "Everything in Starter",
-        "Full CRM pipeline + deal tracking",
-        "Unlimited AI remodel visualizations",
-        "SMS + email automation sequences",
-        "Estimates & invoice system",
-        "Project management tools",
-        "Priority support"
-      ],
-      popular: true,
-      highlight: "Best Value — One extra job/month pays for itself 10x over",
-      cta: "Start Free Trial"
-    },
-    {
-      name: "Pro",
-      monthlyPrice: 497,
-      label: "For Scaling Teams",
-      outcome: "Full SaaS platform for high-volume remodelers",
-      desc: "For remodeling firms ready to dominate their market.",
-      features: [
-        "Everything in Growth",
-        "Multi-user team access (up to 10 seats)",
-        "AI-powered ad copy generator",
-        "SEO blog content system",
-        "Advanced analytics & reporting",
-        "Embeddable AI widget for your website",
-        "Dedicated account manager",
-        "White-glove onboarding"
-      ],
-      cta: "Contact Sales"
-    }
-  ];
-
-  const comparisonRows = [
-    { label: "Lead Capture Website", starter: "✔", pro: "✔", enterprise: "✔" },
-    { label: "CRM System", starter: "Basic", pro: "Full", enterprise: "Advanced" },
-    { label: "AI Visualizer", starter: "Limited", pro: "Unlimited", enterprise: "Unlimited" },
-    { label: "SMS Automation", starter: "✖", pro: "✔", enterprise: "✔" },
-    { label: "Email Automation", starter: "✔", pro: "✔", enterprise: "✔" },
-    { label: "Estimates & Invoices", starter: "✖", pro: "✔", enterprise: "✔" },
-    { label: "Booking System", starter: "✔", pro: "✔", enterprise: "✔" },
-    { label: "Reporting Dashboard", starter: "Basic", pro: "Advanced", enterprise: "Custom" },
-    { label: "Team Access", starter: "1 User", pro: "Up to 5", enterprise: "Unlimited" },
-    { label: "Support Level", starter: "Standard", pro: "Priority", enterprise: "Dedicated" },
-  ];
 
   return (
     <div className="bg-white">
       <Helmet>
         <title>ClosePro Remodel Pricing | CRM & AI Tools for Remodelers</title>
-        <meta name="description" content="View pricing for ClosePro Remodel, including CRM, AI remodel visualizer, lead capture websites, and automation tools built to help remodelers close more $10K–$50K jobs." />
+        <meta name="description" content="View pricing for ClosePro Remodel — Launchpad $99, Accelerator $229, Catalyst $499, Apex $749. CRM, AI remodel visualizer, lead capture, and automation for remodelers." />
       </Helmet>
 
       {/* Urgency Bar */}
@@ -95,9 +127,9 @@ export default function Pricing() {
           <div className="absolute top-0 left-0 w-96 h-96 bg-blue-electric rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
           <div className="absolute bottom-0 right-0 w-96 h-96 bg-blue-electric rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>
         </div>
-        
+
         <div className="max-w-7xl mx-auto px-6 text-center space-y-8 relative z-10">
-          <motion.h1 
+          <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="text-4xl md:text-6xl font-bold leading-tight"
@@ -105,15 +137,15 @@ export default function Pricing() {
             Choose The System That Helps You <br />
             <span className="text-blue-electric">Close More $10K–$50K Remodel Jobs</span>
           </motion.h1>
-          <motion.p 
+          <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
             className="text-xl text-gray-300 max-w-3xl mx-auto"
           >
-            ClosePro Remodel is built to help kitchen remodelers, bathroom remodelers, and general contractors capture more leads, follow up faster, and close more high-ticket projects.
+            Pick the plan that matches your revenue stage. Every tier is built to help you capture more leads, follow up faster, and close more high-ticket remodel projects.
           </motion.p>
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
@@ -123,7 +155,7 @@ export default function Pricing() {
               Book Demo
             </Link>
             <Link to="/how-it-works" className="bg-white/10 text-white px-10 py-5 text-xl rounded-xl font-bold hover:bg-white/20 transition-all inline-block">
-              Start Now
+              See How It Works
             </Link>
           </motion.div>
         </div>
@@ -146,7 +178,7 @@ export default function Pricing() {
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-3 gap-8 items-start">
+        <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-4 gap-6 items-start">
           {plans.map((plan, i) => {
             const displayPrice = annual ? Math.round(plan.monthlyPrice * 0.8) : plan.monthlyPrice;
             return (
@@ -157,56 +189,66 @@ export default function Pricing() {
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
                 whileHover={{ y: -8 }}
-                className={`p-10 rounded-[2.5rem] border bg-white flex flex-col h-full transition-all relative shadow-lg ${
+                className={`p-8 rounded-[2rem] border-2 bg-white flex flex-col h-full transition-all relative shadow-lg ${
                   plan.popular
                     ? 'border-blue-electric ring-4 ring-blue-electric/10 lg:scale-105 z-10'
-                    : 'border-gray-100'
+                    : plan.apex
+                    ? 'border-amber-400 ring-2 ring-amber-400/20'
+                    : plan.color
                 }`}
               >
                 {plan.popular && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 btn-shimmer px-6 py-1.5 rounded-full text-xs font-black uppercase tracking-widest shadow-lg">
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 btn-shimmer px-6 py-1.5 rounded-full text-xs font-black uppercase tracking-widest shadow-lg whitespace-nowrap">
                     {plan.label}
                   </div>
                 )}
-                {!plan.popular && (
+                {plan.apex && (
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-amber-400 text-navy px-6 py-1.5 rounded-full text-xs font-black uppercase tracking-widest shadow-lg whitespace-nowrap flex items-center gap-1">
+                    <Crown size={12} /> {plan.label}
+                  </div>
+                )}
+                {!plan.popular && !plan.apex && (
                   <div className="text-blue-electric font-bold text-xs uppercase tracking-widest mb-4">{plan.label}</div>
                 )}
 
-                <div className="mb-6">
-                  <h3 className="text-3xl font-bold text-navy mb-1">{plan.name}</h3>
-                  <p className="text-blue-electric font-bold text-sm">{plan.outcome}</p>
+                <div className={`mb-4 ${(plan.popular || plan.apex) ? 'mt-4' : ''}`}>
+                  <h3 className={`text-2xl font-bold mb-1 ${plan.apex ? 'text-amber-500' : 'text-navy'}`}>{plan.name}</h3>
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">{plan.revenueStage}</p>
+                  <p className="text-blue-electric font-bold text-sm mt-1">{plan.outcome}</p>
                 </div>
 
                 <div className="flex items-baseline gap-1 mb-2">
-                  <span className="text-3xl font-bold text-navy">$</span>
-                  <span className="text-7xl font-black text-navy tracking-tighter">{displayPrice}</span>
+                  <span className="text-2xl font-bold text-navy">$</span>
+                  <span className="text-6xl font-black text-navy tracking-tighter">{displayPrice}</span>
                   <span className="text-gray-400 font-bold">/mo</span>
                 </div>
-                {annual && <p className="text-green-500 text-xs font-bold mb-6">Billed annually — saving ${(plan.monthlyPrice - displayPrice) * 12}/year</p>}
-                {!annual && <p className="text-gray-400 text-xs mb-6">or ${Math.round(plan.monthlyPrice * 0.8)}/mo billed annually</p>}
+                {annual && <p className="text-green-500 text-xs font-bold mb-4">Saving ${(plan.monthlyPrice - displayPrice) * 12}/year</p>}
+                {!annual && <p className="text-gray-400 text-xs mb-4">or ${Math.round(plan.monthlyPrice * 0.8)}/mo annually</p>}
 
                 {plan.highlight && (
-                  <div className="bg-blue-electric/5 border border-blue-electric/10 p-4 rounded-2xl mb-6 flex items-start gap-3">
-                    <Star className="text-blue-electric shrink-0" size={18} />
-                    <p className="text-sm font-bold text-navy leading-snug">{plan.highlight}</p>
+                  <div className="bg-blue-electric/5 border border-blue-electric/10 p-3 rounded-xl mb-4 flex items-start gap-2">
+                    <Star className="text-blue-electric shrink-0 mt-0.5" size={14} />
+                    <p className="text-xs font-bold text-navy leading-snug">{plan.highlight}</p>
                   </div>
                 )}
 
-                <ul className="space-y-3 mb-8 flex-grow">
+                <ul className="space-y-2.5 mb-6 flex-grow">
                   {plan.features.map((feature, j) => (
-                    <li key={j} className="flex items-start gap-3 text-sm text-gray-600 font-medium">
-                      <CheckCircle2 className="text-blue-electric shrink-0 mt-0.5" size={16} />
+                    <li key={j} className="flex items-start gap-2.5 text-sm text-gray-600 font-medium">
+                      <CheckCircle2 className={`shrink-0 mt-0.5 ${plan.apex ? 'text-amber-500' : 'text-blue-electric'}`} size={15} />
                       {feature}
                     </li>
                   ))}
                 </ul>
 
-                <div className="space-y-3">
+                <div className="space-y-2">
                   <Link
-                    to={plan.name === 'Pro' ? '/contact' : `/signup?plan=${plan.name.toLowerCase()}`}
-                    className={`w-full py-4 rounded-2xl font-black text-center block transition-all ${
+                    to={plan.name === 'Apex' ? '/contact' : `/signup?plan=${plan.name.toLowerCase()}`}
+                    className={`w-full py-4 rounded-xl font-black text-center block transition-all text-sm ${
                       plan.popular
                         ? 'bg-blue-electric text-white hover:bg-navy shadow-xl shadow-blue-electric/30'
+                        : plan.apex
+                        ? 'bg-amber-400 text-navy hover:bg-amber-500 shadow-lg'
                         : 'bg-navy text-white hover:bg-blue-electric'
                     }`}
                   >
@@ -218,17 +260,15 @@ export default function Pricing() {
             );
           })}
         </div>
-        
-        <div className="mt-16 text-center space-y-8">
-          <div className="flex flex-col items-center gap-4">
-            <Link to="/book-demo" className="btn-primary px-12 py-5 text-xl shadow-2xl shadow-blue-electric/20">
-              Book My Demo Now
-            </Link>
-            <p className="text-gray-500 text-sm font-medium flex items-center justify-center gap-2">
-              <ShieldCheck size={16} className="text-green-500" /> 
-              Limited onboarding spots available. We only work with a select number of remodelers per market.
-            </p>
-          </div>
+
+        <div className="mt-16 text-center space-y-4">
+          <Link to="/book-demo" className="btn-primary px-12 py-5 text-xl shadow-2xl shadow-blue-electric/20 inline-block">
+            Book My Demo Now
+          </Link>
+          <p className="text-gray-500 text-sm font-medium flex items-center justify-center gap-2">
+            <ShieldCheck size={16} className="text-green-500" />
+            Limited onboarding spots available. We only work with select remodelers per market.
+          </p>
         </div>
       </section>
 
@@ -237,7 +277,7 @@ export default function Pricing() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="bg-navy rounded-[3rem] p-12 md:p-20 text-white relative overflow-hidden">
             <div className="absolute top-0 right-0 w-1/2 h-full bg-blue-electric/10 skew-x-12 translate-x-1/4"></div>
-            
+
             <div className="relative z-10 grid md:grid-cols-2 gap-16 items-center">
               <div className="space-y-8">
                 <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-electric/20 text-blue-electric rounded-full text-sm font-bold">
@@ -284,10 +324,10 @@ export default function Pricing() {
 
       {/* Comparison Table */}
       <section className="py-24">
-        <div className="max-w-5xl mx-auto px-6">
+        <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-navy mb-4">Compare Plans</h2>
-            <p className="text-gray-500 font-medium">Find the perfect <strong>contractor CRM pricing</strong> and <strong>remodeler software pricing</strong> for your stage.</p>
+            <h2 className="text-4xl font-bold text-navy mb-4">Compare All Plans</h2>
+            <p className="text-gray-500 font-medium">Find the perfect <strong>contractor CRM pricing</strong> and <strong>remodeler software</strong> for your revenue stage.</p>
           </div>
 
           <div className="overflow-x-auto">
@@ -295,24 +335,38 @@ export default function Pricing() {
               <thead>
                 <tr className="border-b-2 border-gray-100">
                   <th className="py-6 px-4 text-left text-navy font-black text-lg">Feature</th>
-                  <th className="py-6 px-4 text-center text-navy font-bold">Starter <span className="block text-xs font-normal text-gray-400">$97/mo</span></th>
-                  <th className="py-6 px-4 text-center text-blue-electric font-black bg-blue-electric/5 rounded-t-2xl">Growth <span className="block text-xs font-normal text-blue-electric">$197/mo</span></th>
-                  <th className="py-6 px-4 text-center text-navy font-bold">Pro <span className="block text-xs font-normal text-gray-400">$497/mo</span></th>
+                  <th className="py-6 px-4 text-center text-navy font-bold">
+                    Launchpad
+                    <span className="block text-xs font-normal text-gray-400">$99/mo</span>
+                  </th>
+                  <th className="py-6 px-4 text-center text-blue-electric font-black bg-blue-electric/5 rounded-t-2xl">
+                    Accelerator
+                    <span className="block text-xs font-normal text-blue-electric">$229/mo</span>
+                  </th>
+                  <th className="py-6 px-4 text-center text-navy font-bold">
+                    Catalyst
+                    <span className="block text-xs font-normal text-gray-400">$499/mo</span>
+                  </th>
+                  <th className="py-6 px-4 text-center text-amber-500 font-black">
+                    Apex
+                    <span className="block text-xs font-normal text-amber-400">$749/mo</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {comparisonRows.map((row, i) => (
                   <tr key={i} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                    <td className="py-5 px-4 text-gray-700 font-bold text-sm">{row.label}</td>
-                    <td className="py-5 px-4 text-center text-gray-500 text-sm font-medium">{row.starter}</td>
-                    <td className="py-5 px-4 text-center text-navy text-sm font-black bg-blue-electric/5">{row.pro}</td>
-                    <td className="py-5 px-4 text-center text-gray-500 text-sm font-medium">{row.enterprise}</td>
+                    <td className="py-4 px-4 text-gray-700 font-bold text-sm">{row.label}</td>
+                    <td className="py-4 px-4 text-center text-gray-500 text-sm font-medium">{row.launchpad}</td>
+                    <td className="py-4 px-4 text-center text-navy text-sm font-black bg-blue-electric/5">{row.accelerator}</td>
+                    <td className="py-4 px-4 text-center text-gray-600 text-sm font-medium">{row.catalyst}</td>
+                    <td className="py-4 px-4 text-center text-amber-600 text-sm font-bold">{row.apex}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          
+
           <div className="mt-12 text-center">
             <Link to="/book-demo" className="text-blue-electric font-bold flex items-center justify-center gap-2 hover:gap-4 transition-all">
               Still not sure? Let's talk about your business <ArrowRight size={20} />
@@ -377,10 +431,10 @@ export default function Pricing() {
           <h2 className="text-4xl font-bold text-navy text-center mb-16">Pricing FAQ</h2>
           <div className="space-y-6">
             {[
+              { q: "Which plan is right for me?", a: "Start with the plan that matches your current revenue stage. Launchpad is for solo remodelers under $500K/yr. Accelerator is our most popular plan for teams between $500K–$1M. Catalyst and Apex are for firms scaling past $1M." },
               { q: "How quickly can I get started?", a: "Most remodelers are up and running within 24–48 hours. Our onboarding team helps you get your website and CRM configured so you can start capturing leads immediately." },
               { q: "Will this actually help me get more jobs?", a: "Yes. The system is designed specifically to improve response time, lead conversion, and closing rates. By responding to leads in seconds and presenting better visuals, you naturally win more bids." },
               { q: "Do I need technical experience?", a: "No. Everything is built to be simple and easy to use. If you can use a smartphone, you can use ClosePro Remodel. Plus, we handle the technical setup for you." },
-              { q: "Is there a setup fee?", a: "We offer custom setup options depending on your needs. Most plans include a one-time onboarding fee to ensure your CRM and website are configured correctly for your specific market." },
               { q: "Can I change plans later?", a: "Yes, you can upgrade or downgrade your plan at any time. Changes will be reflected in your next billing cycle." },
               { q: "Do you offer a free trial?", a: "We don't offer a traditional free trial, but we do offer a comprehensive 15-minute demo where you can see exactly how the platform works before committing." }
             ].map((item, i) => (
@@ -401,7 +455,7 @@ export default function Pricing() {
         <div className="absolute inset-0 opacity-20">
           <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
         </div>
-        
+
         <div className="max-w-4xl mx-auto px-6 text-center space-y-10 relative z-10">
           <h2 className="text-4xl md:text-6xl font-black leading-tight">
             Ready To Close More <br /> High-Ticket Remodel Jobs?

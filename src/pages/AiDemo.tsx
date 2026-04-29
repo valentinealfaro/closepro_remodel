@@ -12,21 +12,33 @@ interface Config { roomType: string; style: string; budget: string; notes: strin
 // Demo result image pairs by room + style
 const DEMO_RESULTS: Record<string, Record<string, string>> = {
   kitchen: {
-    modern:      'https://picsum.photos/seed/kitchen-modern-result/1200/900',
-    luxury:      'https://picsum.photos/seed/kitchen-luxury-result/1200/900',
-    farmhouse:   'https://picsum.photos/seed/kitchen-farm-result/1200/900',
-    traditional: 'https://picsum.photos/seed/kitchen-trad-result/1200/900',
-    minimalist:  'https://picsum.photos/seed/kitchen-min-result/1200/900',
+    farmhouse:   'https://picsum.photos/seed/kitchen-mf-result/1200/900',
+    contemporary:'https://picsum.photos/seed/kitchen-lc-result/1200/900',
+    transitional:'https://picsum.photos/seed/kitchen-tr-result/1200/900',
+    budget:      'https://picsum.photos/seed/kitchen-bm-result/1200/900',
+    european:    'https://picsum.photos/seed/kitchen-eu-result/1200/900',
   },
   bathroom: {
-    modern:      'https://picsum.photos/seed/bath-modern-result/1200/900',
-    luxury:      'https://picsum.photos/seed/bath-luxury-result/1200/900',
-    farmhouse:   'https://picsum.photos/seed/bath-farm-result/1200/900',
-    traditional: 'https://picsum.photos/seed/bath-trad-result/1200/900',
-    minimalist:  'https://picsum.photos/seed/bath-min-result/1200/900',
+    farmhouse:   'https://picsum.photos/seed/bath-mf-result/1200/900',
+    contemporary:'https://picsum.photos/seed/bath-lc-result/1200/900',
+    transitional:'https://picsum.photos/seed/bath-tr-result/1200/900',
+    budget:      'https://picsum.photos/seed/bath-bm-result/1200/900',
+    european:    'https://picsum.photos/seed/bath-eu-result/1200/900',
   },
-  living:   { modern: 'https://picsum.photos/seed/living-modern/1200/900', luxury: 'https://picsum.photos/seed/living-luxury/1200/900', farmhouse: 'https://picsum.photos/seed/living-farm/1200/900', traditional: 'https://picsum.photos/seed/living-trad/1200/900', minimalist: 'https://picsum.photos/seed/living-min/1200/900' },
-  exterior: { modern: 'https://picsum.photos/seed/ext-modern/1200/900', luxury: 'https://picsum.photos/seed/ext-luxury/1200/900', farmhouse: 'https://picsum.photos/seed/ext-farm/1200/900', traditional: 'https://picsum.photos/seed/ext-trad/1200/900', minimalist: 'https://picsum.photos/seed/ext-min/1200/900' },
+  living: {
+    farmhouse:   'https://picsum.photos/seed/living-mf/1200/900',
+    contemporary:'https://picsum.photos/seed/living-lc/1200/900',
+    transitional:'https://picsum.photos/seed/living-tr/1200/900',
+    budget:      'https://picsum.photos/seed/living-bm/1200/900',
+    european:    'https://picsum.photos/seed/living-eu/1200/900',
+  },
+  exterior: {
+    farmhouse:   'https://picsum.photos/seed/ext-mf/1200/900',
+    contemporary:'https://picsum.photos/seed/ext-lc/1200/900',
+    transitional:'https://picsum.photos/seed/ext-tr/1200/900',
+    budget:      'https://picsum.photos/seed/ext-bm/1200/900',
+    european:    'https://picsum.photos/seed/ext-eu/1200/900',
+  },
 };
 
 const SAMPLE_BEFORES: Record<string, string> = {
@@ -44,11 +56,11 @@ const ROOM_TYPES = [
 ];
 
 const STYLES = [
-  { id: 'modern',      label: 'Modern',      desc: 'Clean lines, neutral tones' },
-  { id: 'luxury',      label: 'Luxury',      desc: 'High-end, premium finishes' },
-  { id: 'farmhouse',   label: 'Farmhouse',   desc: 'Warm, rustic & cozy' },
-  { id: 'traditional', label: 'Traditional', desc: 'Classic, timeless design' },
-  { id: 'minimalist',  label: 'Minimalist',  desc: 'Simple, clutter-free' },
+  { id: 'farmhouse',    label: 'Modern Farmhouse',    desc: 'Shaker cabinets, warm wood tones' },
+  { id: 'contemporary', label: 'Luxury Contemporary', desc: 'Waterfall islands, premium finishes' },
+  { id: 'transitional', label: 'Transitional',        desc: 'Classic meets modern elegance' },
+  { id: 'budget',       label: 'Budget-Friendly',     desc: 'High impact, smart spending' },
+  { id: 'european',     label: 'High-End European',   desc: 'Bold veining, custom millwork' },
 ];
 
 const BUDGETS = [
@@ -108,7 +120,7 @@ export default function AiDemo() {
   const [step, setStep] = useState<Step>('upload');
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [config, setConfig] = useState<Config>({ roomType: 'kitchen', style: 'modern', budget: 'premium', notes: '' });
+  const [config, setConfig] = useState<Config>({ roomType: 'kitchen', style: 'farmhouse', budget: 'premium', notes: '' });
   const [genStep, setGenStep] = useState(0);
   const [genProgress, setGenProgress] = useState(0);
   const [email, setEmail] = useState('');
@@ -542,7 +554,7 @@ export default function AiDemo() {
                     Give Every Contractor on Your Team This Power
                   </h3>
                   <p className="text-gray-300 text-lg max-w-2xl mx-auto">
-                    This AI tool + full CRM + automated follow-ups + lead capture website — all in one platform. Starting at just <strong className="text-white">$97/month</strong>.
+                    This AI tool + full CRM + automated follow-ups + lead capture website — all in one platform. Starting at just <strong className="text-white">$99/month</strong>.
                   </p>
                   <div className="flex flex-wrap justify-center gap-4">
                     {[

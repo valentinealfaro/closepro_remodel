@@ -1,19 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  X, 
-  Plus, 
-  Trash2, 
-  Save, 
-  Send, 
-  FileText, 
-  User, 
-  Briefcase, 
-  DollarSign, 
+import {
+  X,
+  Plus,
+  Trash2,
+  Save,
+  Send,
+  FileText,
+  User,
+  Briefcase,
+  DollarSign,
   Settings,
   ChevronLeft,
   Eye,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  LayoutTemplate,
+  ChevronDown
 } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { Estimate, LineItem, PaymentMilestone } from '../types/financial';
@@ -27,6 +29,43 @@ import { collection, query, where, getDocs, serverTimestamp } from 'firebase/fir
 import { db } from '../lib/firebase';
 import { Zap, Loader2, PenTool } from 'lucide-react';
 
+const mkId = () => Math.random().toString(36).substr(2, 9);
+
+const ESTIMATE_TEMPLATES: Record<string, { label: string; serviceType: string; items: Omit<LineItem, 'id'>[] }> = {
+  kitchen_standard: {
+    label: 'Kitchen Remodel (~$45K)',
+    serviceType: 'Kitchen Remodel',
+    items: [
+      { title: 'Demo & Site Preparation', description: 'Remove existing cabinets, counters, flooring, and haul away debris', quantity: 1, unitPrice: 2400, total: 2400 },
+      { title: 'Semi-Custom Shaker Cabinetry', description: 'Solid wood face frame, soft-close hinges & drawer slides, install included', quantity: 1, unitPrice: 14500, total: 14500 },
+      { title: 'Quartz Countertops', description: 'Premium quartz slab, fabrication & install, eased edge profile — 42 sq ft', quantity: 42, unitPrice: 125, total: 5250 },
+      { title: 'Appliance Package', description: 'Range, dishwasher, OTR microwave, refrigerator (allowance)', quantity: 1, unitPrice: 6800, total: 6800 },
+      { title: 'Plumbing & Fixtures', description: 'Rough-in, supply lines, drain, kitchen faucet & disposal install', quantity: 1, unitPrice: 3200, total: 3200 },
+      { title: 'Electrical (Lighting & Outlets)', description: 'Under-cabinet LED, pendant rough-in, GFCI outlets, panel circuit if needed', quantity: 1, unitPrice: 2800, total: 2800 },
+      { title: 'Subway Tile Backsplash', description: '3×6 ceramic subway tile, grout, installation — approx 35 sq ft', quantity: 35, unitPrice: 52, total: 1820 },
+      { title: 'LVP Flooring', description: 'Luxury vinyl plank, underlayment & install — approx 280 sq ft', quantity: 280, unitPrice: 12, total: 3360 },
+      { title: 'Paint & Interior Finish', description: 'Walls, ceiling, trim — two-coat premium paint', quantity: 1, unitPrice: 2200, total: 2200 },
+      { title: 'Hardware & Accessories', description: 'Cabinet pulls, knobs, towel bars, toilet paper holder', quantity: 1, unitPrice: 950, total: 950 },
+      { title: 'Project Management & Cleanup', description: 'Daily cleanup, dumpster, final walkthrough, punch-list', quantity: 1, unitPrice: 2400, total: 2400 },
+    ]
+  },
+  bathroom_standard: {
+    label: 'Bathroom Remodel (~$18K)',
+    serviceType: 'Bathroom Remodel',
+    items: [
+      { title: 'Demo & Haul Away', description: 'Remove tile, vanity, toilet, tub/shower surround, flooring', quantity: 1, unitPrice: 1200, total: 1200 },
+      { title: 'Shower Tile (Floor & Walls)', description: 'Porcelain tile, waterproofing membrane, grout, niche — 80 sq ft', quantity: 80, unitPrice: 48, total: 3840 },
+      { title: 'Vanity & Countertop', description: '36" floating vanity, quartz top, undermount sink', quantity: 1, unitPrice: 2800, total: 2800 },
+      { title: 'Plumbing', description: 'Shower valve, tub filler or rain head, toilet, supply lines & drain', quantity: 1, unitPrice: 2400, total: 2400 },
+      { title: 'Electrical', description: 'Exhaust fan, vanity lighting, GFCI outlets', quantity: 1, unitPrice: 1100, total: 1100 },
+      { title: 'Floor Tile', description: 'Porcelain floor tile, heated mat option available — 45 sq ft', quantity: 45, unitPrice: 42, total: 1890 },
+      { title: 'Toilet & Accessories', description: 'Elongated comfort-height toilet, towel bars, mirror', quantity: 1, unitPrice: 1200, total: 1200 },
+      { title: 'Paint & Interior Finish', description: 'Moisture-resistant paint, trim, caulk & grout sealing', quantity: 1, unitPrice: 950, total: 950 },
+      { title: 'Project Management & Cleanup', description: 'Daily cleanup, final walkthrough, punch-list', quantity: 1, unitPrice: 1100, total: 1100 },
+    ]
+  }
+};
+
 interface EstimateEditorProps {
   estimate?: Estimate | null;
   leadId?: string;
@@ -39,6 +78,7 @@ export default function EstimateEditor({ estimate, leadId, dealId, onClose }: Es
   const [loading, setLoading] = useState(false);
   const [isGeneratingScope, setIsGeneratingScope] = useState(false);
   const [isSigning, setIsSigning] = useState(false);
+  const [showTemplateMenu, setShowTemplateMenu] = useState(false);
   const [signerName, setSignerName] = useState('');
   const [isPreview, setIsPreview] = useState(false);
   const [formData, setFormData] = useState<Partial<Estimate>>({
@@ -156,6 +196,19 @@ export default function EstimateEditor({ estimate, leadId, dealId, onClose }: Es
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadEstimateTemplate = (key: string) => {
+    const tmpl = ESTIMATE_TEMPLATES[key];
+    if (!tmpl) return;
+    const items: LineItem[] = tmpl.items.map(i => ({ ...i, id: mkId() }));
+    setFormData(prev => ({
+      ...prev,
+      projectInfo: { ...prev.projectInfo!, name: prev.projectInfo?.name || tmpl.serviceType, serviceType: tmpl.serviceType },
+    }));
+    calculateTotals(items, formData.pricing?.taxRate || 0, formData.pricing?.discount || 0);
+    setShowTemplateMenu(false);
+    toast.success(`${tmpl.label} template loaded!`);
   };
 
   const generateAIScope = async () => {
@@ -508,16 +561,36 @@ export default function EstimateEditor({ estimate, leadId, dealId, onClose }: Es
               </div>
 
               <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm space-y-6">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-2">
                   <h3 className="font-bold text-navy flex items-center gap-2">
                     <FileText className="text-electric" size={20} /> Line Items
                   </h3>
-                  <button 
-                    onClick={addLineItem}
-                    className="flex items-center gap-2 text-xs font-bold text-electric hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-all"
-                  >
-                    <Plus size={16} /> Add Item
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <button
+                        onClick={() => setShowTemplateMenu(v => !v)}
+                        className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:bg-indigo-50 px-3 py-1.5 rounded-lg transition-all border border-indigo-100"
+                      >
+                        <LayoutTemplate size={14} /> Quick Template <ChevronDown size={12} />
+                      </button>
+                      {showTemplateMenu && (
+                        <div className="absolute right-0 top-full mt-1 bg-white border border-gray-100 shadow-xl rounded-xl overflow-hidden z-20 w-56">
+                          {Object.entries(ESTIMATE_TEMPLATES).map(([key, tmpl]) => (
+                            <button key={key} onClick={() => loadEstimateTemplate(key)}
+                              className="w-full text-left px-4 py-3 text-xs font-bold text-navy hover:bg-blue-50 transition-colors border-b border-gray-50 last:border-0">
+                              {tmpl.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={addLineItem}
+                      className="flex items-center gap-2 text-xs font-bold text-electric hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-all"
+                    >
+                      <Plus size={16} /> Add Item
+                    </button>
+                  </div>
                 </div>
 
                 <div className="space-y-4">
@@ -572,14 +645,21 @@ export default function EstimateEditor({ estimate, leadId, dealId, onClose }: Es
                     </div>
                   ))}
                   {formData.lineItems?.length === 0 && (
-                    <div className="text-center py-12 border-2 border-dashed border-gray-100 rounded-3xl">
-                      <p className="text-sm text-gray-400">No line items added yet.</p>
-                      <button 
-                        onClick={addLineItem}
-                        className="mt-2 text-xs font-bold text-electric hover:underline"
-                      >
-                        Add your first item
-                      </button>
+                    <div className="text-center py-12 border-2 border-dashed border-gray-100 rounded-3xl space-y-3">
+                      <LayoutTemplate size={28} className="text-gray-300 mx-auto" />
+                      <p className="text-sm font-bold text-gray-400">No line items yet</p>
+                      <p className="text-xs text-gray-400">Start from a template or add items manually</p>
+                      <div className="flex items-center justify-center gap-3 pt-1">
+                        {Object.entries(ESTIMATE_TEMPLATES).map(([key, tmpl]) => (
+                          <button key={key} onClick={() => loadEstimateTemplate(key)}
+                            className="px-4 py-2 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-all border border-indigo-100">
+                            {tmpl.label}
+                          </button>
+                        ))}
+                        <button onClick={addLineItem} className="px-4 py-2 text-xs font-bold text-electric bg-blue-50 hover:bg-blue-100 rounded-lg transition-all">
+                          + Blank item
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>

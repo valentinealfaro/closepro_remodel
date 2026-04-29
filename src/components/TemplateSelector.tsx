@@ -1,16 +1,18 @@
 import React from 'react';
-import { 
-  X, 
-  UserPlus, 
-  FileText, 
-  CheckCircle2, 
-  AlertCircle, 
-  Calendar, 
-  Zap, 
+import {
+  X,
+  UserPlus,
+  FileText,
+  CheckCircle2,
+  AlertCircle,
+  Calendar,
+  Zap,
   Clock,
   ArrowRight,
   MessageSquare,
-  Mail
+  Mail,
+  Star,
+  TrendingUp
 } from 'lucide-react';
 import { motion } from 'motion/react';
 
@@ -87,6 +89,44 @@ const TEMPLATES = [
       { id: '1', type: 'action', actionType: 'send_email', config: { message: 'Your appointment for [Service] is confirmed for tomorrow.' } },
       { id: '2', type: 'delay', delayConfig: { value: 1, unit: 'hours' } },
       { id: '3', type: 'action', actionType: 'send_sms', config: { message: 'See you in 1 hour for our [Service] consultation!' } },
+    ]
+  },
+  {
+    id: 'nurture_14day',
+    name: '14-Day Lead Nurture',
+    description: '7-touch sequence proven to convert cold leads into signed contracts.',
+    icon: TrendingUp,
+    color: 'bg-indigo-500',
+    trigger: { type: 'lead_created' },
+    steps: [
+      { id: '1', type: 'action', actionType: 'send_sms', config: { message: 'Hi [Name]! Thanks for your interest in [Service]. I\'m [Rep] at [Company]. What\'s the best time to chat about your project?' } },
+      { id: '2', type: 'action', actionType: 'send_email', config: { subject: 'Your [Service] Project — Let\'s Talk', message: 'Hi [Name],\n\nThank you for reaching out! We specialize in [Service] in [City] and would love to help you bring your vision to life.\n\nWe\'ve helped homeowners like you get stunning results — I\'d love to show you some before/after photos from recent jobs in your neighborhood.\n\nAre you available for a quick 15-minute call this week?\n\n[Rep Name]\n[Company]' } },
+      { id: '3', type: 'delay', delayConfig: { value: 1, unit: 'days' } },
+      { id: '4', type: 'action', actionType: 'send_sms', config: { message: 'Hey [Name], just checking in! Did you have a chance to see my message? Happy to answer any questions about your [Service] project.' } },
+      { id: '5', type: 'delay', delayConfig: { value: 2, unit: 'days' } },
+      { id: '6', type: 'action', actionType: 'send_email', config: { subject: 'See what we did for a home just like yours', message: 'Hi [Name],\n\nI wanted to share a recent project we completed nearby — a full kitchen remodel that came in at $28,000 and took just 3 weeks.\n\nThe homeowner said: "We closed the deal on the spot after seeing the AI visualization. It made the decision so easy."\n\nI\'d love to do the same for you. Want me to generate a free AI visualization of your [Room] so you can see the potential?\n\n[Rep Name]' } },
+      { id: '7', type: 'delay', delayConfig: { value: 2, unit: 'days' } },
+      { id: '8', type: 'action', actionType: 'send_sms', config: { message: 'Hi [Name], I can generate a FREE AI visualization of your remodel — no commitment. Want me to send it over? Takes 60 seconds.' } },
+      { id: '9', type: 'delay', delayConfig: { value: 2, unit: 'days' } },
+      { id: '10', type: 'action', actionType: 'send_email', config: { subject: 'Limited spots available this month', message: 'Hi [Name],\n\nI wanted to reach out because we only take on a limited number of new projects each month, and we\'re filling up fast for [Month].\n\nIf you\'re still thinking about your [Service] project, now is the perfect time to lock in your spot and pricing before our schedule fills.\n\nBook a free 15-min call: [Calendar Link]\n\n[Rep Name]' } },
+      { id: '11', type: 'delay', delayConfig: { value: 3, unit: 'days' } },
+      { id: '12', type: 'action', actionType: 'send_sms', config: { message: 'Hey [Name], last check-in from me — are you still looking to do your [Service]? No worries if timing changed, just want to make sure I\'m not missing you.' } },
+      { id: '13', type: 'delay', delayConfig: { value: 4, unit: 'days' } },
+      { id: '14', type: 'action', actionType: 'send_email', config: { subject: 'Closing your file — let me know if timing changes', message: 'Hi [Name],\n\nI\'ve reached out a few times and haven\'t heard back, so I\'ll assume the timing isn\'t right and won\'t bother you further.\n\nIf anything changes and you\'re ready to move forward with your [Service] project, I\'m always here.\n\nWishing you the best,\n[Rep Name]\n[Company]\n[Phone]' } },
+    ]
+  },
+  {
+    id: 'google_review',
+    name: 'Google Review Request',
+    description: 'Automatically ask satisfied clients for 5-star reviews after project completion.',
+    icon: Star,
+    color: 'bg-yellow-400',
+    trigger: { type: 'job_completed' },
+    steps: [
+      { id: '1', type: 'delay', delayConfig: { value: 1, unit: 'days' } },
+      { id: '2', type: 'action', actionType: 'send_sms', config: { message: 'Hi [Name]! So glad your [Service] turned out great. Would you mind leaving us a quick Google review? It means the world to our small business: [Google Review Link]' } },
+      { id: '3', type: 'delay', delayConfig: { value: 3, unit: 'days' } },
+      { id: '4', type: 'action', actionType: 'send_email', config: { subject: 'How did we do, [Name]?', message: 'Hi [Name],\n\nThank you for choosing us for your [Service] project! We hope you\'re loving the results.\n\nIf you have a moment, an honest Google review helps us help more homeowners like you: [Google Review Link]\n\nThank you so much!\n[Rep Name]' } },
     ]
   }
 ];

@@ -40,7 +40,7 @@ export default function Contact() {
       // Lead Routing Logic
       const isHighValue = formData.revenue === '$50K–$100K' || formData.revenue === '$100K+';
       
-      await addDoc(collection(db, 'leads'), {
+      await addDoc(collection(db, 'contactSubmissions'), {
         ...formData,
         type: 'contact_form',
         isHighValue,
