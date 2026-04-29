@@ -5,9 +5,21 @@ import { useState, useEffect, useRef } from 'react';
 import { trackEvent } from '../lib/tracking';
 import TerminalAI from '../components/TerminalAI';
 
-// ── 3D Tilt Hook ──────────────────────────────────────────────────────────────
-function useTilt() {
+// ── 3D Tilt Card — must be its own component so the hook is called at the top level ──
+interface FeatureCardProps {
+  icon: React.ElementType;
+  title: string;
+  desc: string;
+  result: string;
+  color: string;
+  bg: string;
+  text: string;
+  delay: number;
+}
+
+function FeatureCard({ icon: Icon, title, desc, result, color, bg, text, delay }: FeatureCardProps) {
   const ref = useRef<HTMLDivElement>(null);
+
   const onMouseMove = (e: React.MouseEvent) => {
     const el = ref.current;
     if (!el) return;
@@ -17,12 +29,31 @@ function useTilt() {
     el.style.transform = `perspective(800px) rotateX(${y}deg) rotateY(${x}deg) translateZ(12px)`;
     el.style.boxShadow = `${-x}px ${y}px 30px rgba(30,144,255,0.15)`;
   };
+
   const onMouseLeave = () => {
     if (!ref.current) return;
     ref.current.style.transform = 'perspective(800px) rotateX(0) rotateY(0) translateZ(0)';
     ref.current.style.boxShadow = '';
   };
-  return { ref, onMouseMove, onMouseLeave };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }} transition={{ delay }}>
+      <div ref={ref} onMouseMove={onMouseMove} onMouseLeave={onMouseLeave}
+        className="card-3d group relative bg-white rounded-2xl border border-gray-100 p-8 shadow-sm overflow-hidden h-full cursor-default transition-shadow">
+        <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${color}`} />
+        <div className={`w-14 h-14 ${bg} ${text} rounded-2xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform shadow-sm`}>
+          <Icon size={24} />
+        </div>
+        <h3 className="text-xl font-bold text-navy mb-3">{title}</h3>
+        <p className="text-gray-500 text-sm leading-relaxed mb-5">{desc}</p>
+        <div className={`inline-flex items-center gap-1.5 ${text} font-bold text-xs ${bg} px-3 py-1.5 rounded-full`}>
+          <CheckCircle2 size={13} /> {result}
+        </div>
+      </div>
+    </motion.div>
+  );
 }
 
 // ── Animated Counter ─────────────────────────────────────────────────────────
@@ -298,35 +329,12 @@ export default function Home() {
           </motion.div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              { icon: Zap, title: 'AI Remodel Visualizer', desc: 'Show customers their dream kitchen or bath in seconds. Close deals on the first visit.', result: 'Close rate +40%', color: 'from-blue-500 to-blue-electric', bg: 'bg-blue-50', text: 'text-blue-electric' },
-              { icon: LayoutIcon, title: 'Lead Capture Website', desc: 'High-converting site optimized to turn visitors into demo bookings automatically.', result: 'Leads +3x', color: 'from-purple-500 to-purple-700', bg: 'bg-purple-50', text: 'text-purple-600' },
-              { icon: BarChart3, title: 'CRM Pipeline', desc: 'Track every lead from initial contact to signed contract. Never lose a deal again.', result: 'Zero lost leads', color: 'from-green-500 to-green-700', bg: 'bg-green-50', text: 'text-green-600' },
-              { icon: MessageSquare, title: 'Automated Follow-Ups', desc: 'Auto SMS and email sequences that nurture leads until they\'re ready to sign.', result: 'Response in 60s', color: 'from-orange-400 to-orange-600', bg: 'bg-orange-50', text: 'text-orange-600' },
-              { icon: FileText, title: 'Estimates & Invoices', desc: 'Professional estimates that get approved faster and invoices that get paid on time.', result: 'Paid 2x faster', color: 'from-teal-400 to-teal-600', bg: 'bg-teal-50', text: 'text-teal-600' },
-              { icon: Users, title: 'Demo Booking Tools', desc: 'Let customers book consultations directly to your calendar while you sleep.', result: 'More demos booked', color: 'from-pink-400 to-pink-600', bg: 'bg-pink-50', text: 'text-pink-600' },
-            ].map((feature, i) => {
-              // eslint-disable-next-line react-hooks/rules-of-hooks
-              const tilt = useTilt();
-              return (
-                <motion.div key={i}
-                  initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }} transition={{ delay: i * 0.08 }}>
-                  <div ref={tilt.ref} onMouseMove={tilt.onMouseMove} onMouseLeave={tilt.onMouseLeave}
-                    className="card-3d group relative bg-white rounded-2xl border border-gray-100 p-8 shadow-sm overflow-hidden h-full cursor-default">
-                    <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${feature.color}`} />
-                    <div className={`w-14 h-14 ${feature.bg} ${feature.text} rounded-2xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform shadow-sm`}>
-                      <feature.icon size={24} />
-                    </div>
-                    <h3 className="text-xl font-bold text-navy mb-3">{feature.title}</h3>
-                    <p className="text-gray-500 text-sm leading-relaxed mb-5">{feature.desc}</p>
-                    <div className={`inline-flex items-center gap-1.5 ${feature.text} font-bold text-xs ${feature.bg} px-3 py-1.5 rounded-full`}>
-                      <CheckCircle2 size={13} /> {feature.result}
-                    </div>
-                  </div>
-                </motion.div>
-              );
-            })}
+            <FeatureCard icon={Zap}          title="AI Remodel Visualizer" desc="Show customers their dream kitchen or bath in seconds. Close deals on the first visit."       result="Close rate +40%"   color="from-blue-500 to-blue-electric" bg="bg-blue-50"   text="text-blue-electric" delay={0} />
+            <FeatureCard icon={LayoutIcon}   title="Lead Capture Website"  desc="High-converting site optimized to turn visitors into demo bookings automatically."          result="Leads +3x"         color="from-purple-500 to-purple-700"  bg="bg-purple-50" text="text-purple-600"    delay={0.08} />
+            <FeatureCard icon={BarChart3}    title="CRM Pipeline"          desc="Track every lead from initial contact to signed contract. Never lose a deal again."          result="Zero lost leads"   color="from-green-500 to-green-700"    bg="bg-green-50"  text="text-green-600"     delay={0.16} />
+            <FeatureCard icon={MessageSquare} title="Automated Follow-Ups"  desc="Auto SMS and email sequences that nurture leads until they're ready to sign."               result="Response in 60s"   color="from-orange-400 to-orange-600"  bg="bg-orange-50" text="text-orange-600"    delay={0.24} />
+            <FeatureCard icon={FileText}     title="Estimates & Invoices"  desc="Professional estimates that get approved faster and invoices that get paid on time."         result="Paid 2x faster"    color="from-teal-400 to-teal-600"      bg="bg-teal-50"   text="text-teal-600"      delay={0.32} />
+            <FeatureCard icon={Users}        title="Demo Booking Tools"    desc="Let customers book consultations directly to your calendar while you sleep."                 result="More demos booked" color="from-pink-400 to-pink-600"      bg="bg-pink-50"   text="text-pink-600"      delay={0.4} />
           </div>
         </div>
       </section>
