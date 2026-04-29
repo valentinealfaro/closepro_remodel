@@ -31,7 +31,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
-import { AutomationService } from '../services/AutomationService';
+import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 import LeadsManager from '../components/LeadsManager';
 import AdminPanel from '../components/AdminPanel';
@@ -356,12 +357,11 @@ const AccountSettings = () => {
 // ─── Onboarding Checklist ──────────────────────────────────────────────────
 
 const ONBOARDING_STEPS = [
-  { id: 'profile',    label: 'Complete your business profile',      link: '/app/settings',    icon: '👤' },
-  { id: 'lead',       label: 'Add your first lead',                 link: '/app/leads',       icon: '👥' },
-  { id: 'automation', label: 'Set up an automation sequence',       link: '/app/automation',  icon: '⚡' },
-  { id: 'visualizer', label: 'Try the AI Visualizer',               link: '/app/visualizer',  icon: '🤖' },
-  { id: 'estimate',   label: 'Create your first estimate',          link: '/app/estimates',   icon: '📄' },
-  { id: 'website',    label: 'Customize your contractor website',   link: '/app/website',     icon: '🌐' },
+  { id: 'embed',    label: 'Get your embed code',                   link: '/app/embed',       icon: '🔗' },
+  { id: 'install',  label: 'Add the widget to your website',        link: '/app/embed',       icon: '💻' },
+  { id: 'profile',  label: 'Complete your business profile',        link: '/app/settings',    icon: '👤' },
+  { id: 'lead',     label: 'Receive your first widget lead',        link: '/app/leads',       icon: '📥' },
+  { id: 'project',  label: 'Save a lead into a project folder',     link: '/app/projects',    icon: '📁' },
 ];
 
 const OnboardingChecklist = () => {
@@ -444,6 +444,54 @@ const OnboardingChecklist = () => {
   );
 };
 
+// ─── Recent Leads (real data) ─────────────────────────────────────────────
+
+const RecentLeads = ({ tenantId }: { tenantId?: string }) => {
+  const [leads, setLeads] = useState<any[]>([]);
+  useEffect(() => {
+    if (!tenantId) return;
+    const unsub = onSnapshot(
+      query(collection(db, `tenants/${tenantId}/widgetLeads`), orderBy('createdAt', 'desc'), limit(5)),
+      (snap) => setLeads(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+    );
+    return unsub;
+  }, [tenantId]);
+
+  return (
+    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+      <div className="flex items-center justify-between mb-5">
+        <h3 className="font-bold text-navy">Recent Widget Leads</h3>
+        <Link to="/app/leads" className="text-xs text-blue-electric font-bold hover:underline">View all →</Link>
+      </div>
+      {leads.length === 0 ? (
+        <div className="text-center py-8 space-y-2">
+          <p className="text-3xl">📭</p>
+          <p className="text-sm font-bold text-gray-500">No leads yet</p>
+          <p className="text-xs text-gray-400">Leads from your embedded widget appear here automatically</p>
+          <Link to="/app/embed" className="text-xs text-blue-electric font-bold hover:underline">
+            Get your embed code →
+          </Link>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {leads.map((lead) => (
+            <div key={lead.id} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg transition-colors">
+              <div className="w-9 h-9 bg-blue-electric/10 rounded-full flex items-center justify-center font-bold text-blue-electric text-sm shrink-0">
+                {(lead.name || '?')[0].toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-sm text-navy truncate">{lead.name}</p>
+                <p className="text-xs text-gray-500 capitalize">{lead.roomType} · {lead.style}</p>
+              </div>
+              <span className="text-[10px] font-bold bg-blue-100 text-blue-600 px-2 py-1 rounded-full shrink-0">New</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ─── Dashboard Overview ────────────────────────────────────────────────────
 
 const Overview = () => {
@@ -466,96 +514,33 @@ const Overview = () => {
       {/* Onboarding Checklist */}
       <OnboardingChecklist />
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {[
-          { label: 'Total Leads', value: '124', change: '+12%', color: 'bg-blue-500', icon: '👥' },
-          { label: 'Pending Estimates', value: '18', change: '+5%', color: 'bg-yellow-500', icon: '📋' },
-          { label: 'Active Projects', value: '12', change: '+2%', color: 'bg-purple-500', icon: '🏗️' },
-          { label: 'Monthly Revenue', value: '$84k', change: '+15%', color: 'bg-green-500', icon: '💰' },
-        ].map((stat, i) => (
-          <div key={i} className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-gray-500 font-medium">{stat.label}</p>
-              <span className="text-lg">{stat.icon}</span>
-            </div>
-            <div className="flex items-end justify-between">
-              <h3 className="text-2xl font-bold text-navy">{stat.value}</h3>
-              <span className="text-xs font-bold text-green-500">{stat.change}</span>
-            </div>
-            <div className="w-full h-1 bg-gray-100 rounded-full mt-3 overflow-hidden">
-              <div className={`h-full ${stat.color}`} style={{ width: '60%' }}></div>
-            </div>
-          </div>
-        ))}
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Leads */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between mb-5">
-            <h3 className="font-bold text-navy">Recent Leads</h3>
-            <Link to="/app/leads" className="text-xs text-blue-electric font-bold hover:underline">View all →</Link>
+        {/* Embed code CTA — most important action */}
+        <div className="bg-navy rounded-xl p-6 text-white space-y-4">
+          <div className="flex items-center gap-3">
+            <span className="text-3xl">🔗</span>
+            <div>
+              <h3 className="font-bold text-lg">Add the Widget to Your Website</h3>
+              <p className="text-gray-300 text-sm">Paste one snippet. Homeowners generate → you get leads.</p>
+            </div>
           </div>
-          <div className="space-y-3">
-            {[
-              { name: 'John Doe', type: 'Kitchen Remodel', time: '2 hours ago', status: 'New' },
-              { name: 'Sarah Kim', type: 'Bathroom Remodel', time: '4 hours ago', status: 'Contacted' },
-              { name: 'Mike Torres', type: 'Full Home Reno', time: '1 day ago', status: 'Estimate Sent' },
-              { name: 'Linda Park', type: 'Kitchen Remodel', time: '2 days ago', status: 'New' }
-            ].map((lead, i) => (
-              <div key={i} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 bg-blue-electric/10 rounded-full flex items-center justify-center font-bold text-blue-electric text-sm">
-                    {lead.name.split(' ').map(n => n[0]).join('')}
-                  </div>
-                  <div>
-                    <p className="font-bold text-sm text-navy">{lead.name}</p>
-                    <p className="text-xs text-gray-500">{lead.type} · {lead.time}</p>
-                  </div>
-                </div>
-                <span className={`text-xs font-bold px-2 py-1 rounded-full ${
-                  lead.status === 'New' ? 'bg-blue-100 text-blue-600' :
-                  lead.status === 'Contacted' ? 'bg-yellow-100 text-yellow-700' :
-                  'bg-green-100 text-green-700'
-                }`}>{lead.status}</span>
-              </div>
-            ))}
+          <div className="bg-white/10 rounded-xl p-3 font-mono text-xs text-gray-300 break-all">
+            {`<iframe src="https://closepro-remodel.vercel.app/widget/${userData?.tenantId || '...'}" width="100%" height="750" frameborder="0" style="border-radius:16px"/>`}
           </div>
+          <Link to="/app/embed" className="inline-flex items-center gap-2 bg-blue-electric text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-blue-600 transition-all">
+            Get Full Embed Code + Instructions →
+          </Link>
         </div>
 
-        {/* Upcoming Appointments */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between mb-5">
-            <h3 className="font-bold text-navy">Upcoming Appointments</h3>
-            <Link to="/app/pipeline" className="text-xs text-blue-electric font-bold hover:underline">Pipeline →</Link>
-          </div>
-          <div className="space-y-3">
-            {[
-              { month: 'Apr', day: 29, title: 'Consultation: Smith Residence', time: '10:00 AM', address: '123 Maple St.' },
-              { month: 'Apr', day: 30, title: 'Estimate: Johnson Kitchen', time: '2:00 PM', address: '456 Oak Ave.' },
-              { month: 'May', day: 2, title: 'Walkthrough: Williams Bath', time: '11:00 AM', address: '789 Pine Rd.' }
-            ].map((appt, i) => (
-              <div key={i} className="flex items-center gap-4 p-3 border-l-4 border-electric bg-blue-50 rounded-r-lg">
-                <div className="text-center min-w-[44px]">
-                  <p className="text-[10px] font-bold text-electric uppercase">{appt.month}</p>
-                  <p className="text-xl font-black text-navy leading-none">{appt.day}</p>
-                </div>
-                <div>
-                  <p className="font-bold text-sm text-navy">{appt.title}</p>
-                  <p className="text-xs text-gray-500">{appt.time} · {appt.address}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        {/* Recent widget leads */}
+        <RecentLeads tenantId={userData?.tenantId} />
 
         {/* Quick Actions */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
           <h3 className="font-bold text-navy mb-5">Quick Actions</h3>
           <div className="grid grid-cols-2 gap-3">
             {[
-              { label: 'View Leads', icon: '📥', to: '/app/leads' },
+              { label: 'View All Leads', icon: '📥', to: '/app/leads' },
               { label: 'Saved Projects', icon: '📁', to: '/app/projects' },
               { label: 'Get Embed Code', icon: '🔗', to: '/app/embed' },
               { label: 'Account Settings', icon: '⚙️', to: '/app/settings' }
