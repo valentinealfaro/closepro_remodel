@@ -1,0 +1,210 @@
+import { GoogleGenAI } from "@google/genai";
+
+const GEMINI_KEY =
+  process.env.GEMINI_API_KEY ||
+  process.env.VITE_GEMINI_API_KEY ||
+  process.env.API_KEY ||
+  "";
+
+// ── Style / Budget descriptions ───────────────────────────────────────────────
+
+const KITCHEN_STYLE_DESCS: Record<string, string> = {
+  modern:       "clean, bright, sleek, minimal, updated, professional, with smooth finishes and a fresh modern layout",
+  luxury:       "high-end, premium, elegant, magazine-quality, with upgraded materials, dramatic lighting, and expensive finishes",
+  farmhouse:    "warm, inviting, clean, with shaker cabinets, natural textures, wood accents, and a comfortable family-home feel",
+  traditional:  "timeless, balanced, classic, with warm finishes, detailed cabinetry, and a polished residential look",
+  contemporary: "stylish, clean, refined, with bold contrast, smooth finishes, and modern design choices",
+  budget:       "clean, simple, affordable, practical, with updated surfaces while keeping the remodel realistic and cost-conscious",
+};
+
+const BATHROOM_STYLE_DESCS: Record<string, string> = {
+  modern:      "clean, sleek, bright, updated, minimal, and easy to imagine as a real remodel",
+  luxury:      "high-end, relaxing, hotel-inspired, elegant, with premium tile, soft lighting, and a calm luxury feel",
+  minimalist:  "simple, clean, open, uncluttered, with neutral finishes and modern fixtures",
+  traditional: "classic, warm, polished, with timeless finishes and practical residential design",
+  budget:      "clean, practical, affordable, updated, and realistic without expensive luxury materials",
+  bold:        "dramatic, modern, high-contrast, with darker finishes, strong lighting, and premium design impact",
+};
+
+const BUDGET_DESC: Record<string, string> = {
+  basic:    "Basic/Economy ($5K–$15K): Use affordable materials, keep changes realistic, avoid premium luxury finishes.",
+  midrange: "Mid-Range ($15K–$35K): Use quality finishes, better lighting, updated surfaces, realistic upgraded look.",
+  highend:  "High-End ($35K–$75K): Use premium materials, luxury lighting, custom design details, magazine-quality presentation.",
+  luxury:   "Luxury ($75K+): Spare no expense. Highest quality materials, bespoke design, ultra-premium result.",
+};
+
+const NEGATIVE_PROMPT =
+  "Do not change the original room layout. Do not add people. Do not add text or logos. Do not create unrealistic cabinets, distorted counters, warped appliances, or fantasy design elements. Avoid: cartoon, anime, illustration, drawing, painting, low quality, blurry, distorted proportions, warped cabinets, warped countertops, warped appliances, unrealistic shower glass, distorted vanity, distorted mirror, broken tile lines, impossible layout, changed camera angle, changed room structure, extra doors, extra windows, people, hands, faces, text, logo, watermark, brand names, clutter, messy construction, unrealistic lighting, overexposed, underexposed, fantasy design, CGI-looking, plastic textures.";
+
+// ── Prompt builders ───────────────────────────────────────────────────────────
+
+function buildKitchenPrompt(
+  style: string,
+  budget: string,
+  mats: Record<string, string>,
+  mode: string,
+  notes: string
+): string {
+  const styleDesc = KITCHEN_STYLE_DESCS[style] || KITCHEN_STYLE_DESCS.modern;
+  const budgetDesc = BUDGET_DESC[budget] || BUDGET_DESC.midrange;
+  const modeNote =
+    mode === "creative"
+      ? "Creative mode: Allow more dramatic design choices while still preserving the main room layout."
+      : "Realistic mode: Keep original structure very close. Focus on finishes and surface updates only.";
+
+  return `Transform this kitchen into a realistic ${style} kitchen remodel.
+
+Preserve the existing room layout, camera angle, wall locations, windows, doors, ceiling, and overall structure.
+
+Design details:
+- Cabinet style: ${mats.cabinetStyle || "shaker cabinets"}
+- Cabinet color: ${mats.cabinetColor || "white"}
+- Countertop material: ${mats.countertop || "white quartz with subtle gray veining"}
+- Backsplash: ${mats.backsplash || "white subway tile"}
+- Flooring: ${mats.flooring || "luxury vinyl plank"}
+- Hardware finish: ${mats.hardware || "matte black"}
+- Lighting: ${mats.lighting || "recessed lighting with pendant lights"}
+- Appliance style: ${mats.appliances || "stainless steel"}
+- Budget level: ${budgetDesc}
+- Mode: ${modeNote}
+
+Create a realistic contractor-grade remodel preview that a homeowner could use to visualize the finished kitchen.
+
+The kitchen should feel ${styleDesc}.
+
+User notes: ${notes || "Make the kitchen look fresh, updated, and high-quality for a remodeling sales presentation."}
+
+Image style: Photorealistic, high detail, realistic lighting, professional interior remodel photography, clean finish, realistic textures, natural shadows, premium contractor presentation.
+
+${NEGATIVE_PROMPT}`;
+}
+
+function buildBathroomPrompt(
+  style: string,
+  budget: string,
+  mats: Record<string, string>,
+  mode: string,
+  notes: string
+): string {
+  const styleDesc = BATHROOM_STYLE_DESCS[style] || BATHROOM_STYLE_DESCS.modern;
+  const budgetDesc = BUDGET_DESC[budget] || BUDGET_DESC.midrange;
+  const modeNote =
+    mode === "creative"
+      ? "Creative mode: Allow more dramatic design choices while still preserving the main room layout."
+      : "Realistic mode: Keep original structure very close. Focus on finishes and surface updates only.";
+
+  return `Transform this bathroom into a realistic ${style} bathroom remodel.
+
+Preserve the existing room layout, camera angle, wall locations, windows, doors, ceiling, plumbing wall orientation, and overall structure.
+
+Design details:
+- Shower/tub type: ${mats.showerTub || "tub and shower combo"}
+- Tile style: ${mats.tile || "large format porcelain tile"}
+- Vanity type: ${mats.vanityType || "single vanity"}
+- Vanity color: ${mats.vanityColor || "white"}
+- Countertop material: ${mats.countertop || "quartz"}
+- Fixture finish: ${mats.fixtures || "brushed nickel"}
+- Flooring: ${mats.flooring || "large format tile"}
+- Lighting: ${mats.lighting || "LED vanity lighting"}
+- Mirror style: ${mats.mirror || "large rectangular mirror"}
+- Budget level: ${budgetDesc}
+- Mode: ${modeNote}
+
+Create a realistic contractor-grade remodel preview that a homeowner could use to visualize the finished bathroom.
+
+The bathroom should feel ${styleDesc}.
+
+User notes: ${notes || "Make the bathroom look clean, updated, and high-quality."}
+
+Image style: Photorealistic, high detail, realistic lighting, professional bathroom remodel photography, clean tile lines, realistic textures, natural shadows, accurate perspective.
+
+${NEGATIVE_PROMPT}`;
+}
+
+// ── Vercel serverless handler ─────────────────────────────────────────────────
+
+export default async function handler(req: any, res: any) {
+  // CORS headers (needed for cross-origin fetch from the SPA)
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+
+  const {
+    imageBase64,
+    mimeType = "image/jpeg",
+    roomType = "kitchen",
+    style = "modern",
+    budget = "midrange",
+    materials = {},
+    mode = "realistic",
+    notes = "",
+  } = req.body || {};
+
+  if (!imageBase64) return res.status(400).json({ error: "imageBase64 is required" });
+  if (!GEMINI_KEY)  return res.status(500).json({ error: "GEMINI_API_KEY not configured" });
+
+  const prompt =
+    roomType === "bathroom"
+      ? buildBathroomPrompt(style, budget, materials, mode, notes)
+      : buildKitchenPrompt(style, budget, materials, mode, notes);
+
+  const MODELS_TO_TRY = [
+    "gemini-2.0-flash-exp",
+    "gemini-2.0-flash",
+    "gemini-2.0-flash-preview-image-generation",
+  ];
+
+  const ai = new GoogleGenAI({ apiKey: GEMINI_KEY });
+
+  for (const model of MODELS_TO_TRY) {
+    try {
+      const response = await ai.models.generateContent({
+        model,
+        contents: [
+          {
+            role: "user",
+            parts: [
+              { inlineData: { mimeType, data: imageBase64 } },
+              { text: prompt },
+            ],
+          },
+        ],
+        config: { responseModalities: ["IMAGE", "TEXT"] } as any,
+      });
+
+      const parts: any[] = response.candidates?.[0]?.content?.parts || [];
+      const imgPart = parts.find((p: any) => p.inlineData?.data);
+
+      if (imgPart?.inlineData) {
+        return res.status(200).json({
+          success: true,
+          imageData: imgPart.inlineData.data,
+          mimeType: imgPart.inlineData.mimeType || "image/jpeg",
+          model,
+        });
+      }
+
+      console.warn(`${model} returned no image, trying next`);
+    } catch (err: any) {
+      const isNotFound =
+        err.message?.includes("not found") ||
+        err.message?.includes("404") ||
+        err.message?.includes("INVALID_ARGUMENT");
+      if (isNotFound) {
+        console.warn(`${model} unavailable, trying next`);
+        continue;
+      }
+      console.error("Remodel generation error:", err.message);
+      return res.status(500).json({ error: err.message || "Generation failed" });
+    }
+  }
+
+  return res.status(422).json({
+    error: "Image generation unavailable",
+    message:
+      "The AI image generation model is not available on this account. Try again later.",
+  });
+}
