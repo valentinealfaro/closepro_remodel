@@ -4,6 +4,15 @@ import { Link } from 'react-router-dom';
 
 const ALL_POSTS = [
   {
+    title: "How Kitchen Remodelers Are Using AI to Close $30K Jobs on the First Visit",
+    excerpt: "Discover how an AI remodel visualizer is helping contractors transform client visions into reality, cut sales cycles, and close high-value jobs without leaving the consultation.",
+    category: "AI for Remodelers",
+    date: "April 29, 2026",
+    author: "ClosePro Team",
+    image: "https://picsum.photos/seed/ai-close-jobs/800/500",
+    readTime: "8 min read"
+  },
+  {
     title: "How to Close More $50K Kitchen Remodeling Jobs",
     excerpt: "Learn the specific sales techniques that top-tier remodelers use to build trust and close high-ticket projects without competing on price.",
     category: "Contractor Sales",

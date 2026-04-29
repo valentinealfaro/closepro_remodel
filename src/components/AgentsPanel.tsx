@@ -5,8 +5,33 @@ import {
   Image, Globe, Kanban, Calculator, MessageSquare,
   Target, DollarSign, Search, BarChart3, Shield,
   TrendingUp, ChevronRight, X, Send, Copy, CheckCircle2,
-  Loader2, Bot, Sparkles
+  Loader2, Bot, Sparkles, PlayCircle, Download
 } from 'lucide-react';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+
+// ── Default prompts for batch "Run All" mode ──────────────────────────────────
+const BATCH_PROMPTS: Record<string, string> = {
+  "ceo":              "ClosePro Remodel is a SaaS platform for kitchen/bathroom remodelers. Plans: Starter $97/mo, Growth $197/mo, Pro $497/mo. Platform is built and live at closepro-remodel.vercel.app. We have 0 paying customers. What are our top 5 revenue-driving priorities to reach 100 paying customers in 90 days?",
+  "product-architect":"ClosePro Remodel needs to scale from MVP to full SaaS. Current features: CRM, AI visualizer, estimates, invoices, automation, lead capture, blog. What are the 5 most important product improvements needed to increase trial-to-paid conversion from 18% to 35%?",
+  "ai-generator":     "Write 5 optimized AI image generation prompts for a kitchen remodel visualizer. Each prompt should produce a stunning transformation photo. Include: modern farmhouse, luxury contemporary, transitional, budget-friendly modern, and high-end European styles. Format for Stable Diffusion / DALL-E.",
+  "ai-tester":        "We use an AI remodel visualizer where contractors upload a room photo and see a remodeled version. Common issues: dark photos produce bad results, cluttered rooms confuse the AI, small bathrooms get distorted proportions. Write a testing protocol with 10 test cases, expected results, and improvement prompts for each failure scenario.",
+  "demo-experience":  "ClosePro Remodel has a free AI demo at /ai-demo. Users upload a room photo, pick a style, see a before/after result, then are asked for their email. Current problem: we think users are dropping off before uploading. Write a full optimization plan for the demo flow to maximize email captures and trial signups.",
+  "sales-page":       "Write high-converting copy for ClosePro Remodel's homepage hero section. Target: kitchen remodelers making $200K-$1M/year who are tired of losing jobs to competitors. Include: headline, subheadline, 3 bullet benefits, CTA button text, and a trust-building element. Make it bold and results-focused.",
+  "product-showcase": "Create a 5-step product showcase script for ClosePro Remodel's demo call. Walk a potential contractor customer through: (1) AI visualizer, (2) lead capture, (3) CRM pipeline, (4) automated follow-up, (5) estimates. Each step should have a wow moment and clear benefit statement.",
+  "video-script":     "Write a 45-second explainer video script for ClosePro Remodel. Open with a pain point (contractors losing jobs because customers can't visualize the remodel). Show the solution (AI visualization + CRM). End with a strong CTA. Include: voiceover text, on-screen text overlays, and scene descriptions.",
+  "content":          "Write a complete SEO blog post titled 'How Kitchen Remodelers Are Using AI to Close $30K Jobs on the First Visit'. Target keyword: AI remodel visualizer. Include: meta description, H1, 4 H2 sections, conclusion, and internal CTA to try ClosePro Remodel free. Minimum 800 words.",
+  "widget":           "Design the ClosePro Remodel embeddable AI widget product. This widget lets contractors add our AI remodel visualizer to THEIR website. Write: (1) product description, (2) key features list, (3) pricing ($97/mo basic, $197/mo with custom branding), (4) installation instructions, (5) marketing copy for the widget landing page.",
+  "crm":              "A kitchen remodeler has 24 leads in their pipeline: 8 new, 6 contacted, 5 estimate sent, 3 scheduled, 2 closed won. They haven't followed up with 4 leads in over 7 days. Write a prioritized action plan for this week to maximize closings, including specific follow-up messages for each cold lead.",
+  "estimate":         "Generate a professional estimate for a kitchen remodel project: 200 sq ft kitchen, gut renovation, semi-custom cabinets, quartz countertops, tile backsplash, new appliances (mid-range), LVP flooring, recessed lighting. Location: suburban Oklahoma. Include line items, labor, materials, timeline, payment schedule, and warranty.",
+  "automation":       "Write a 7-touch follow-up sequence for a contractor who just received a new kitchen remodel lead. The lead filled out a form but hasn't responded to the first call. Sequence should span 14 days. Include: SMS messages, email subject lines, email body, and timing. Make it personal and urgency-building without being pushy.",
+  "lead-capture":     "Write all copy for ClosePro Remodel's lead capture assets: (1) Homepage exit popup, (2) AI demo email gate, (3) Free guide offer ('5 Ways AI Is Changing Remodeling'), (4) Webinar registration page, (5) SMS opt-in confirmation message. Each should have a compelling headline, 2-3 benefit bullets, and CTA.",
+  "pricing":          "Analyze ClosePro Remodel's pricing: Starter $97/mo, Growth $197/mo, Pro $497/mo. Annual discount at 20% off. Target market: contractors making $200K-$2M/year. Recommend: (1) optimal price points, (2) what features to gate at each tier, (3) upsell triggers, (4) annual vs monthly conversion strategy, (5) competitive positioning vs JobNimbus ($25/mo) and Buildertrend ($99+/mo).",
+  "seo":              "Create a 90-day SEO strategy for ClosePro Remodel. Target keywords: 'AI remodel visualizer', 'contractor CRM software', 'kitchen remodel software', 'bathroom remodel tool', 'remodeling business software'. Include: keyword priority list, content calendar (12 posts), technical SEO checklist, and local SEO tactics for contractor markets.",
+  "analytics":        "ClosePro Remodel key metrics to track: demo usage rate, email capture rate from demo, trial signup rate, trial-to-paid conversion, monthly churn, average revenue per user, CAC, LTV. We currently have 0 paying customers. Design a metrics dashboard and weekly reporting template. Include which metrics matter most in the first 90 days.",
+  "qa":               "Create a comprehensive QA checklist for ClosePro Remodel before launching paid advertising. Test all critical paths: (1) homepage to demo flow, (2) demo to email capture, (3) email to signup, (4) signup to dashboard, (5) dashboard core features, (6) mobile experience, (7) payment flow. Flag any must-fix issues that would kill conversions.",
+  "growth":           "Build a 90-day growth playbook for ClosePro Remodel to acquire first 100 paying customers. Budget: $0 (organic only) for first 30 days, then $1,000/mo for paid. Tactics: contractor Facebook groups, YouTube, cold outreach, partnerships with lumber yards/suppliers, affiliate with remodel coaches. Include week-by-week action plan.",
+};
 
 // ── Agent Definitions ─────────────────────────────────────────────────────────
 const AGENTS = [
@@ -279,12 +304,309 @@ function AgentRunner({ agent, onClose, onSave }: {
   );
 }
 
+// ── Batch Runner (rate-limited for free tier) ─────────────────────────────────
+// Free tier: 5 RPM per model, 4K output tokens/min
+// Strategy: 3 agents per batch, 65s cooldown → ~2.8 req/min (safe buffer)
+const BATCH_SIZE = 19; // paid tier — run all at once, no cooldown needed
+const BATCH_DELAY_MS = 0;
+const TOTAL_BATCHES = 1;
+// Pre-assign each agent to a batch number
+const AGENT_BATCH = AGENTS.reduce<Record<string, number>>((acc, agent, i) => {
+  acc[agent.id] = Math.floor(i / BATCH_SIZE) + 1;
+  return acc;
+}, {});
+
+type BatchStatus = 'queued' | 'running' | 'done' | 'error';
+interface BatchResult { agentId: string; output: string; error?: string; duration: number; }
+
+function BatchRunner({ onClose, onComplete }: { onClose: () => void; onComplete: (results: BatchResult[]) => void }) {
+  const [statuses, setStatuses] = useState<Record<string, BatchStatus>>({});
+  const [results, setResults] = useState<BatchResult[]>([]);
+  const [started, setStarted] = useState(false);
+  const [finished, setFinished] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [currentBatch, setCurrentBatch] = useState(0);
+  const [countdown, setCountdown] = useState(0);
+  const [cooling, setCooling] = useState(false);
+
+  const sleep = (ms: number) => new Promise<void>(resolve => {
+    let remaining = Math.round(ms / 1000);
+    setCooling(true);
+    setCountdown(remaining);
+    const tick = setInterval(() => {
+      remaining -= 1;
+      setCountdown(remaining);
+      if (remaining <= 0) { clearInterval(tick); setCooling(false); resolve(); }
+    }, 1000);
+  });
+
+  const runQueue = async () => {
+    setStarted(true);
+    // Mark all as queued
+    const init: Record<string, BatchStatus> = {};
+    AGENTS.forEach(a => { init[a.id] = 'queued'; });
+    setStatuses(init);
+
+    const allResults: BatchResult[] = [];
+
+    for (let b = 0; b < TOTAL_BATCHES; b++) {
+      const batchAgents = AGENTS.slice(b * BATCH_SIZE, (b + 1) * BATCH_SIZE);
+      setCurrentBatch(b + 1);
+
+      // Mark this batch as running
+      setStatuses(prev => {
+        const next = { ...prev };
+        batchAgents.forEach(a => { next[a.id] = 'running'; });
+        return next;
+      });
+
+      // Fire all agents in this batch in parallel
+      const batchResults = await Promise.allSettled(
+        batchAgents.map(async (agent) => {
+          const start = Date.now();
+          try {
+            const res = await fetch(`/api/agents/${agent.id}/run`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ prompt: BATCH_PROMPTS[agent.id] }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed');
+            setStatuses(prev => ({ ...prev, [agent.id]: 'done' }));
+            return { agentId: agent.id, output: data.output, duration: Date.now() - start } as BatchResult;
+          } catch (err: any) {
+            setStatuses(prev => ({ ...prev, [agent.id]: 'error' }));
+            return { agentId: agent.id, output: '', error: err.message, duration: Date.now() - start } as BatchResult;
+          }
+        })
+      );
+
+      batchResults.forEach(r => {
+        if (r.status === 'fulfilled') allResults.push(r.value);
+      });
+
+      // Cooldown between batches (not after the last one)
+      if (b < TOTAL_BATCHES - 1) await sleep(BATCH_DELAY_MS);
+    }
+
+    setResults(allResults);
+    setFinished(true);
+    onComplete(allResults);
+
+    // Save to Firebase + local project file
+    try {
+      await addDoc(collection(db, 'agentBatchRuns'), {
+        results: allResults.reduce((acc, r) => ({ ...acc, [r.agentId]: { output: r.output, error: r.error, duration: r.duration } }), {}),
+        totalAgents: AGENTS.length,
+        successCount: allResults.filter(r => !r.error).length,
+        createdAt: serverTimestamp(),
+      });
+      setSaved(true);
+    } catch { /* Firebase optional */ }
+
+    // Auto-save to local project file so Claude can read and implement changes
+    try {
+      await fetch('/api/agents/save-results', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ results: allResults }),
+      });
+    } catch { /* local save optional */ }
+  };
+
+  const downloadAll = () => {
+    const text = results.map(r => {
+      const agent = AGENTS.find(a => a.id === r.agentId);
+      return `${'='.repeat(60)}\n${agent?.name?.toUpperCase()} — ${agent?.role}\n${'='.repeat(60)}\n\n${r.output || `ERROR: ${r.error}`}\n\n`;
+    }).join('\n');
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `closepro-agents-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const doneCount = Object.values(statuses).filter(s => s === 'done').length;
+  const errorCount = Object.values(statuses).filter(s => s === 'error').length;
+  const progress = started ? Math.round(((doneCount + errorCount) / AGENTS.length) * 100) : 0;
+  const estMinutes = Math.ceil((TOTAL_BATCHES * 65) / 60);
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-navy/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      onClick={!started ? onClose : undefined}>
+      <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }}
+        className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
+        onClick={e => e.stopPropagation()}>
+
+        {/* Header */}
+        <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+          <div>
+            <h2 className="font-bold text-navy text-xl flex items-center gap-2">
+              <PlayCircle className="text-blue-electric" size={24} /> Run All 19 Agents
+            </h2>
+            <p className="text-gray-400 text-sm mt-0.5">
+              {!started
+                ? `${TOTAL_BATCHES} batches of ${BATCH_SIZE} · respects free tier (5 RPM) · ~${estMinutes} min total`
+                : finished
+                ? `Complete! ${doneCount} succeeded${errorCount > 0 ? `, ${errorCount} failed` : ''}.`
+                : cooling
+                ? `Batch ${currentBatch - 1}/${TOTAL_BATCHES} done · cooldown to respect rate limits...`
+                : `Running batch ${currentBatch}/${TOTAL_BATCHES} · ${doneCount} of ${AGENTS.length} done`}
+            </p>
+          </div>
+          {!started && <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl text-gray-400"><X size={18} /></button>}
+        </div>
+
+        {/* Progress + countdown */}
+        {started && (
+          <div className="px-6 py-3 border-b border-gray-100 space-y-2">
+            <div className="flex justify-between text-xs font-bold text-gray-500">
+              <span>
+                {cooling
+                  ? <span className="text-amber-500">⏳ Rate-limit cooldown — next batch in {countdown}s</span>
+                  : `Batch ${currentBatch} of ${TOTAL_BATCHES} running`}
+              </span>
+              <span className={finished ? 'text-green-500' : 'text-blue-electric'}>{progress}%</span>
+            </div>
+            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+              <motion.div animate={{ width: `${progress}%` }}
+                className={`h-full rounded-full ${cooling ? 'bg-amber-400' : 'bg-gradient-to-r from-blue-electric to-purple-500'}`} />
+            </div>
+            {cooling && (
+              <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                <motion.div
+                  initial={{ width: '100%' }}
+                  animate={{ width: '0%' }}
+                  transition={{ duration: BATCH_DELAY_MS / 1000, ease: 'linear' }}
+                  className="h-full bg-amber-300 rounded-full"
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Agent grid */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {!started ? (
+            <div className="space-y-4">
+              <div className="bg-green-50 border border-green-200 rounded-2xl p-4 text-sm">
+                <p className="font-bold text-green-800 mb-2">⚡ Paid Tier — All 19 Run Simultaneously</p>
+                <div className="grid grid-cols-3 gap-3 text-xs text-green-700">
+                  <div className="bg-white rounded-xl p-2 text-center border border-green-100">
+                    <p className="font-black text-green-800 text-base">19</p>
+                    <p>run at once</p>
+                  </div>
+                  <div className="bg-white rounded-xl p-2 text-center border border-green-100">
+                    <p className="font-black text-green-800 text-base">0s</p>
+                    <p>cooldown</p>
+                  </div>
+                  <div className="bg-white rounded-xl p-2 text-center border border-green-100">
+                    <p className="font-black text-green-800 text-base">~1m</p>
+                    <p>total runtime</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                {AGENTS.map((agent, i) => {
+                  const Icon = agent.icon;
+                  const batchNum = AGENT_BATCH[agent.id];
+                  return (
+                    <div key={agent.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded-xl text-xs text-gray-600 border border-gray-100">
+                      <div className={`w-6 h-6 ${agent.color} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                        <Icon size={12} className="text-white" />
+                      </div>
+                      <span className="font-medium truncate flex-1">{agent.name}</span>
+                      <span className="text-[10px] text-gray-400 font-mono flex-shrink-0">B{batchNum}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              {AGENTS.map(agent => {
+                const Icon = agent.icon;
+                const status = statuses[agent.id] || 'queued';
+                const result = results.find(r => r.agentId === agent.id);
+                const batchNum = AGENT_BATCH[agent.id];
+                return (
+                  <motion.div key={agent.id} layout
+                    className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
+                      status === 'done'    ? 'bg-green-50 border-green-200' :
+                      status === 'error'   ? 'bg-red-50 border-red-200' :
+                      status === 'running' ? 'bg-blue-electric/5 border-blue-electric/30' :
+                                            'bg-gray-50 border-gray-100 opacity-50'
+                    }`}>
+                    <div className={`w-8 h-8 ${agent.color} rounded-lg flex items-center justify-center flex-shrink-0 ${status === 'queued' ? 'opacity-40' : ''}`}>
+                      <Icon size={14} className="text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-navy truncate">{agent.name}</p>
+                      {status === 'done'    && result && <p className="text-[10px] text-green-600 font-medium">{(result.duration / 1000).toFixed(1)}s ✓</p>}
+                      {status === 'error'   && <p className="text-[10px] text-red-500">{result?.error?.slice(0, 30)}</p>}
+                      {status === 'running' && <motion.p animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 1, repeat: Infinity }} className="text-[10px] text-blue-electric font-medium">Running...</motion.p>}
+                      {status === 'queued'  && <p className="text-[10px] text-gray-400">Batch {batchNum} — queued</p>}
+                    </div>
+                    <div className="flex-shrink-0">
+                      {status === 'done'    && <CheckCircle2 size={16} className="text-green-500" />}
+                      {status === 'error'   && <X size={16} className="text-red-500" />}
+                      {status === 'running' && <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}><Loader2 size={16} className="text-blue-electric" /></motion.div>}
+                      {status === 'queued'  && <span className="text-[10px] font-mono text-gray-300">B{batchNum}</span>}
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-6 border-t border-gray-100 flex gap-3">
+          {!started ? (
+            <>
+              <button onClick={onClose} className="px-5 py-3 rounded-xl border border-gray-200 font-bold text-navy hover:bg-gray-50 text-sm">Cancel</button>
+              <button onClick={runQueue}
+                className="btn-shimmer flex-1 py-3 rounded-xl font-bold text-lg flex items-center justify-center gap-2">
+                <PlayCircle size={20} /> Start — {TOTAL_BATCHES} Batches
+              </button>
+            </>
+          ) : finished ? (
+            <>
+              <button onClick={downloadAll}
+                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-navy text-white font-bold hover:bg-blue-electric transition-all">
+                <Download size={18} /> Download All Results
+              </button>
+              <button onClick={onClose} className="px-5 py-3 rounded-xl border border-gray-200 font-bold text-navy hover:bg-gray-50 text-sm text-center">
+                {saved ? '✓ Saved' : 'Close'}
+              </button>
+            </>
+          ) : (
+            <div className="flex-1 text-center space-y-1">
+              {cooling ? (
+                <p className="text-amber-600 font-bold text-sm">⏳ Cooling down {countdown}s to respect rate limits...</p>
+              ) : (
+                <p className="text-blue-electric font-bold text-sm">Running batch {currentBatch}/{TOTAL_BATCHES}...</p>
+              )}
+              <p className="text-gray-400 text-xs">Safe to step away — results auto-save to Firebase when done</p>
+            </div>
+          )}
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 // ── Main AgentsPanel ──────────────────────────────────────────────────────────
 export default function AgentsPanel() {
   const [activeCat, setActiveCat] = useState('all');
   const [activeAgent, setActiveAgent] = useState<typeof AGENTS[0] | null>(null);
   const [runs, setRuns] = useState<Record<string, AgentRun>>({});
   const [searchQuery, setSearchQuery] = useState('');
+  const [showBatchRunner, setShowBatchRunner] = useState(false);
 
   const filtered = AGENTS.filter(a => {
     const matchesCat = activeCat === 'all' || a.cat === activeCat;
@@ -316,6 +638,10 @@ export default function AgentsPanel() {
               <span className="text-xs font-bold text-green-700">{totalRuns} agents run this session</span>
             </div>
           )}
+          <button onClick={() => setShowBatchRunner(true)}
+            className="btn-shimmer px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2">
+            <PlayCircle size={16} /> Run All 19
+          </button>
           <div className="flex items-center gap-1.5 glass-dark px-3 py-2 rounded-xl neon-border">
             <motion.div animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 2, repeat: Infinity }}
               className="w-2 h-2 bg-green-400 rounded-full" />
@@ -409,6 +735,22 @@ export default function AgentsPanel() {
           </div>
         </div>
       )}
+
+      {/* Batch Runner Modal */}
+      <AnimatePresence>
+        {showBatchRunner && (
+          <BatchRunner
+            onClose={() => setShowBatchRunner(false)}
+            onComplete={(results) => {
+              const newRuns: Record<string, AgentRun> = {};
+              results.forEach(r => {
+                if (r.output) newRuns[r.agentId] = { output: r.output, prompt: BATCH_PROMPTS[r.agentId] || '', timestamp: new Date() };
+              });
+              setRuns(prev => ({ ...prev, ...newRuns }));
+            }}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Agent Runner Modal */}
       <AnimatePresence>

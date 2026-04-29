@@ -152,18 +152,18 @@ export default function Home() {
             </motion.div>
 
             <h1 className="text-5xl lg:text-6xl xl:text-7xl font-bold text-white leading-[1.05] tracking-tight">
-              Land More{' '}
+              Stop Losing{' '}
               <span className="relative inline-block">
-                <span className="text-blue-electric">$10K–$50K</span>
+                <span className="text-blue-electric">High-Profit</span>
                 <motion.span
                   animate={{ scaleX: [0, 1] }} transition={{ duration: 0.6, delay: 0.8 }}
                   className="absolute -bottom-2 left-0 right-0 h-1 bg-blue-electric/40 rounded-full origin-left block" />
               </span>
-              {' '}Remodel Jobs — Without Chasing Leads
+              {' '}Kitchen & Bathroom Remodels
             </h1>
 
             <p className="text-lg text-gray-300 leading-relaxed max-w-xl">
-              ClosePro Remodel is the all-in-one CRM, AI visualizer, and automation platform built exclusively for kitchen & bathroom remodelers. Stop relying on referrals.
+              ClosePro isn't just software — it's your unfair advantage. A proven system to consistently close <strong className="text-white">3X more $10K–$50K jobs</strong>, command higher margins, and build predictable revenue without chasing referrals.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4">

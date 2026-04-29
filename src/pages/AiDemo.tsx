@@ -218,59 +218,75 @@ export default function AiDemo() {
             <motion.div key="upload" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
               className="max-w-2xl mx-auto space-y-6">
               <div className="text-center space-y-2">
-                <h2 className="text-2xl md:text-3xl font-bold text-navy">Upload Your Room Photo</h2>
-                <p className="text-gray-500">Kitchen, bathroom, living room, or exterior — any photo works.</p>
+                <h2 className="text-2xl md:text-3xl font-bold text-navy">See Your Room Transformed Instantly</h2>
+                <p className="text-gray-500">No account needed. Pick a sample or upload your own photo.</p>
               </div>
 
-              {/* Drop zone */}
-              <div
-                onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
-                onDragLeave={() => setIsDragging(false)}
-                onDrop={handleDrop}
-                onClick={() => fileRef.current?.click()}
-                className={`relative border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer transition-all ${
-                  isDragging ? 'border-blue-electric bg-blue-electric/5 scale-105' : uploadedImage ? 'border-green-400 bg-green-50' : 'border-gray-200 hover:border-blue-electric hover:bg-blue-electric/5'
-                }`}>
-                {uploadedImage ? (
-                  <div className="space-y-4">
-                    <img src={uploadedImage} alt="Preview" className="w-48 h-36 object-cover rounded-xl mx-auto shadow-md" />
-                    <p className="text-green-600 font-bold flex items-center justify-center gap-2"><CheckCircle2 size={18} /> Photo ready!</p>
-                    <button onClick={e => { e.stopPropagation(); setUploadedImage(null); }} className="text-sm text-gray-400 hover:text-red-500 flex items-center gap-1 mx-auto"><X size={14} /> Remove</button>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <motion.div animate={{ y: [0, -6, 0] }} transition={{ duration: 2, repeat: Infinity }}
-                      className="w-16 h-16 bg-blue-electric/10 rounded-2xl flex items-center justify-center mx-auto">
-                      <Upload size={28} className="text-blue-electric" />
-                    </motion.div>
-                    <div>
-                      <p className="text-navy font-bold text-lg">Drop your photo here</p>
-                      <p className="text-gray-400 text-sm">or click to browse</p>
-                    </div>
-                    <p className="text-xs text-gray-400">JPG, PNG, WEBP up to 10MB</p>
-                  </div>
-                )}
-                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])} />
-              </div>
-
-              <div className="flex items-center gap-4">
-                <div className="flex-1 h-px bg-gray-200" />
-                <span className="text-gray-400 text-sm font-medium">or</span>
-                <div className="flex-1 h-px bg-gray-200" />
-              </div>
-
-              {/* Sample images */}
-              <div>
-                <p className="text-center text-sm text-gray-500 font-medium mb-3">Use a sample photo to see the demo</p>
+              {/* Sample photos — PRIMARY option (kills upload friction) */}
+              <div className="bg-blue-electric/5 border-2 border-blue-electric/20 rounded-2xl p-5 space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="bg-blue-electric text-white text-xs font-black px-2 py-0.5 rounded-full">FASTEST</span>
+                  <p className="text-sm font-bold text-navy">Try with a sample room — no upload needed</p>
+                </div>
                 <div className="grid grid-cols-4 gap-3">
                   {ROOM_TYPES.map(room => (
-                    <button key={room.id} onClick={() => { setConfig(c => ({ ...c, roomType: room.id })); setUploadedImage(null); }}
-                      className={`rounded-xl overflow-hidden border-2 transition-all ${config.roomType === room.id && !uploadedImage ? 'border-blue-electric shadow-lg shadow-blue-electric/20' : 'border-gray-200'}`}>
+                    <button key={room.id}
+                      onClick={() => { setConfig(c => ({ ...c, roomType: room.id })); setUploadedImage(null); }}
+                      className={`rounded-xl overflow-hidden border-2 transition-all hover:scale-105 ${config.roomType === room.id && !uploadedImage ? 'border-blue-electric shadow-lg shadow-blue-electric/30 scale-105' : 'border-gray-200 hover:border-blue-electric'}`}>
                       <img src={SAMPLE_BEFORES[room.id]} alt={room.label} className="w-full h-20 object-cover" referrerPolicy="no-referrer" />
                       <div className="p-1.5 text-center text-xs font-bold text-navy">{room.emoji} {room.label}</div>
                     </button>
                   ))}
                 </div>
+                {!uploadedImage && (
+                  <p className="text-xs text-blue-electric font-bold text-center">
+                    ✓ {ROOM_TYPES.find(r => r.id === config.roomType)?.label} selected — ready to go!
+                  </p>
+                )}
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div className="flex-1 h-px bg-gray-200" />
+                <span className="text-gray-400 text-sm font-medium">or upload your own</span>
+                <div className="flex-1 h-px bg-gray-200" />
+              </div>
+
+              {/* Drop zone — secondary option */}
+              <div
+                onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={handleDrop}
+                className={`relative border-2 border-dashed rounded-2xl p-8 text-center transition-all ${
+                  isDragging ? 'border-blue-electric bg-blue-electric/5 scale-105' :
+                  uploadedImage ? 'border-green-400 bg-green-50' :
+                  'border-gray-200 hover:border-blue-electric hover:bg-blue-electric/5'
+                }`}>
+                {uploadedImage ? (
+                  <div className="space-y-3">
+                    <img src={uploadedImage} alt="Preview" className="w-40 h-28 object-cover rounded-xl mx-auto shadow-md" />
+                    <p className="text-green-600 font-bold flex items-center justify-center gap-2"><CheckCircle2 size={16} /> Your photo ready!</p>
+                    <button onClick={() => setUploadedImage(null)} className="text-sm text-gray-400 hover:text-red-500 flex items-center gap-1 mx-auto"><X size={13} /> Remove & use sample</button>
+                  </div>
+                ) : (
+                  <label className="cursor-pointer block space-y-3">
+                    <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto">
+                      <Upload size={22} className="text-gray-400" />
+                    </div>
+                    <div>
+                      <p className="text-navy font-bold">Drop your photo here</p>
+                      <p className="text-gray-400 text-sm">or <span className="text-blue-electric underline">click to browse</span></p>
+                    </div>
+                    <p className="text-xs text-gray-400">JPG, PNG, WEBP up to 10MB</p>
+                    {/* Input inside label so clicking anywhere in the zone triggers it */}
+                    <input
+                      ref={fileRef}
+                      type="file"
+                      accept="image/*"
+                      style={{ position: 'absolute', opacity: 0, width: '1px', height: '1px', overflow: 'hidden' }}
+                      onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])}
+                    />
+                  </label>
+                )}
               </div>
 
               <motion.button
