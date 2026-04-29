@@ -13,8 +13,6 @@ const GEMINI_KEY = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY
 const GEMINI_MODEL = "gemini-2.5-flash";
 const getAI = () => new GoogleGenAI({ apiKey: GEMINI_KEY });
 
-// ── Stability AI ──────────────────────────────────────────────────────────────
-const STABILITY_KEY = process.env.STABILITY_API_KEY || "";
 
 // ── Agent definitions (Gemini-powered, no model field needed) ────────────────
 const AGENTS: Record<string, { system: string }> = {
@@ -334,38 +332,8 @@ ${NEGATIVE_PROMPT}`;
 
     const combinedPrompt = `Photorealistic interior design photo of a remodeled ${roomType}. Room: ${roomDesc}. ${prompt} Professional interior photography, realistic lighting, high detail.`;
 
-    // ── Step 3: Stability AI — structure control (BEST img2img, preserves layout) ──
-    if (STABILITY_KEY) {
-      console.log('Trying Stability AI structure control...');
-      try {
-        const stabilityPrompt = `${prompt}\n\nCRITICAL: Preserve the EXACT same room layout, camera angle, perspective, wall positions, window locations, ceiling height, and room footprint as the input image. Only change the finishes, materials, and style. Do NOT create a different room.`;
-        const blob = new Blob([Buffer.from(imageBase64, 'base64')], { type: mimeType });
-        const form = new FormData();
-        form.append('image', blob, 'room.jpg');
-        form.append('prompt', stabilityPrompt.slice(0, 10000));
-        form.append('control_strength', '0.85');
-        form.append('output_format', 'jpeg');
-
-        const stabRes = await fetch('https://api.stability.ai/v2beta/stable-image/control/structure', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${STABILITY_KEY}`, 'Accept': 'image/*' },
-          body: form as any,
-          signal: AbortSignal.timeout(55000),
-        });
-
-        if (stabRes.ok) {
-          const buffer = await stabRes.arrayBuffer();
-          const base64out = Buffer.from(buffer).toString('base64');
-          return res.json({ success: true, imageData: base64out, mimeType: 'image/jpeg', model: 'stability-structure' });
-        }
-        const errText = await stabRes.text().catch(() => stabRes.status.toString());
-        console.warn('Stability AI returned:', stabRes.status, errText);
-      } catch (err: any) {
-        console.warn('Stability AI error:', err.message);
-      }
-    }
-
-    // ── Step 4: Try Imagen 3 ──────────────────────────────────────────────────
+    // ── Step 3: Imagen 3 (text-to-image with room description) ──────────────
+    console.log('Trying Imagen 3...');
     try {
       const imgRes = await (ai.models as any).generateImages({
         model: 'imagen-3.0-generate-001',
@@ -381,26 +349,9 @@ ${NEGATIVE_PROMPT}`;
       console.warn('Imagen 3 failed:', err.message);
     }
 
-    // ── Step 5: Last resort — Pollinations.ai (text-to-image, no layout preservation) ──
-    console.log('Falling back to Pollinations.ai (Flux)...');
-    try {
-      const cleanPrompt = combinedPrompt.replace(/\n+/g, ' ').replace(/[^\w\s,.:;!?()'"-]/g, '').slice(0, 450);
-      const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(cleanPrompt)}?width=1024&height=768&nologo=true&model=flux&enhance=true&seed=${Date.now()}`;
-      const imgFetch = await fetch(pollinationsUrl, { signal: AbortSignal.timeout(50000) });
-      if (imgFetch.ok) {
-        const buffer = await imgFetch.arrayBuffer();
-        const base64 = Buffer.from(buffer).toString('base64');
-        const ct = imgFetch.headers.get('content-type') || 'image/jpeg';
-        return res.json({ success: true, imageData: base64, mimeType: ct, model: 'pollinations-flux' });
-      }
-      console.warn('Pollinations returned status:', imgFetch.status);
-    } catch (err: any) {
-      console.error('Pollinations fallback error:', err.message);
-    }
-
     return res.status(422).json({
       error: 'Image generation unavailable',
-      message: 'All image generation methods failed. Please try again in a moment.',
+      message: 'Generation failed. Your API key may still be activating — try again in a few minutes.',
     });
   });
 
