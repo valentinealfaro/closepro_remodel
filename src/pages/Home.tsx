@@ -125,6 +125,7 @@ function LiveDemo() {
   const [name, setName]           = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [captured, setCaptured]   = useState(false);
+  const [notes, setNotes]         = useState('');
 
   const styles    = room === 'kitchen' ? KITCHEN_STYLES : BATHROOM_STYLES;
   const beforeImg = (tab === 'upload' && previewUrl) ? previewUrl : SAMPLES[room];
