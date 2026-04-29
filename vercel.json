@@ -1,7 +1,7 @@
 {
   "functions": {
     "api/generate-remodel.ts": {
-      "maxDuration": 60
+      "maxDuration": 120
     }
   },
   "rewrites": [

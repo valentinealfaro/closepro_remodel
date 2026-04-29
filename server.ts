@@ -312,47 +312,61 @@ ${NEGATIVE_PROMPT}`;
       }
     }
 
-    // ── Step 2: Fallback — vision analysis + Imagen 3 text-to-image ──────────
-    console.log('img2img unavailable, falling back to Imagen 3...');
+    // ── Step 2: Vision analysis — describe the room (used by both fallbacks) ──
+    console.log('img2img unavailable, analyzing room with vision...');
+    let roomDesc = `a ${roomType} with standard layout`;
     try {
-      // Analyze the room with Gemini vision to get a detailed description
       const analysisRes = await ai.models.generateContent({
         model: GEMINI_MODEL,
         contents: [{ role: 'user', parts: [
           { inlineData: { mimeType, data: imageBase64 } },
-          { text: `Describe this ${roomType} in precise detail for an AI image generator: room shape, approximate dimensions, camera angle/perspective, window and door positions, ceiling height, current materials, colors, lighting, and all visible fixtures. Be specific and factual. 3-5 sentences.` }
+          { text: `Describe this ${roomType} for an AI image generator: camera angle, window/door positions, ceiling height, current materials, colors, lighting, fixtures. Be specific. 3-4 sentences.` }
         ]}],
       });
-      const roomDesc = analysisRes.text?.trim() || `a ${roomType} with standard layout`;
+      roomDesc = analysisRes.text?.trim() || roomDesc;
       console.log('Room analysis:', roomDesc);
+    } catch (err: any) {
+      console.warn('Vision analysis failed:', err.message);
+    }
 
-      // Build an Imagen-optimised prompt
-      const imagenPrompt = `Photorealistic interior design rendering of a remodeled ${roomType}.
+    const combinedPrompt = `Photorealistic interior design photo of a remodeled ${roomType}. Room: ${roomDesc}. ${prompt} Professional interior photography, realistic lighting, high detail.`;
 
-Room context: ${roomDesc}
-
-${prompt}
-
-Style: Professional interior photography, realistic lighting, high detail, clean finish.`;
-
+    // ── Step 3: Try Imagen 3 ──────────────────────────────────────────────────
+    try {
       const imgRes = await (ai.models as any).generateImages({
         model: 'imagen-3.0-generate-001',
-        prompt: imagenPrompt,
+        prompt: combinedPrompt,
         config: { numberOfImages: 1, outputMimeType: 'image/jpeg', aspectRatio: '4:3' },
       });
-
       const imageBytes = imgRes?.generatedImages?.[0]?.image?.imageBytes;
       if (imageBytes) {
         return res.json({ success: true, imageData: imageBytes, mimeType: 'image/jpeg', model: 'imagen-3.0-generate-001' });
       }
-      console.warn('Imagen 3 returned no image bytes');
+      console.warn('Imagen 3 returned no bytes');
     } catch (err: any) {
-      console.error('Imagen 3 fallback error:', err.message);
+      console.warn('Imagen 3 failed:', err.message);
+    }
+
+    // ── Step 4: Final fallback — Pollinations.ai (free, no API key) ──────────
+    console.log('Falling back to Pollinations.ai (Flux)...');
+    try {
+      const cleanPrompt = combinedPrompt.replace(/\n+/g, ' ').replace(/[^\w\s,.:;!?()'"-]/g, '').slice(0, 450);
+      const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(cleanPrompt)}?width=1024&height=768&nologo=true&model=flux&enhance=true&seed=${Date.now()}`;
+      const imgFetch = await fetch(pollinationsUrl, { signal: AbortSignal.timeout(50000) });
+      if (imgFetch.ok) {
+        const buffer = await imgFetch.arrayBuffer();
+        const base64 = Buffer.from(buffer).toString('base64');
+        const ct = imgFetch.headers.get('content-type') || 'image/jpeg';
+        return res.json({ success: true, imageData: base64, mimeType: ct, model: 'pollinations-flux' });
+      }
+      console.warn('Pollinations returned status:', imgFetch.status);
+    } catch (err: any) {
+      console.error('Pollinations fallback error:', err.message);
     }
 
     return res.status(422).json({
       error: 'Image generation unavailable',
-      message: 'Image generation is not enabled for this API key. Go to aistudio.google.com and make sure your key has access to Imagen 3 or Gemini image generation.',
+      message: 'All image generation methods failed. Please try again in a moment.',
     });
   });
 
