@@ -1,286 +1,92 @@
 import { ReactNode, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, ChevronRight, Phone, MapPin, MessageSquare, Zap } from 'lucide-react';
+import { Menu, X, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { trackEvent } from '../lib/tracking';
 
-interface LayoutProps {
-  children: ReactNode;
-}
+interface LayoutProps { children: ReactNode; }
 
 export default function Layout({ children }: LayoutProps) {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [showScrollCTA, setShowScrollCTA] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-      
-      // Show scroll CTA bar after 50% scroll
-      const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
-      const scrollPercentage = (window.scrollY / scrollHeight) * 100;
-      setShowScrollCTA(scrollPercentage > 50);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Close menu on route change
-  useEffect(() => {
-    setIsMenuOpen(false);
-    window.scrollTo(0, 0);
-  }, [location]);
-
-  const navLinks = [
-    { name: 'How It Works', href: '/how-it-works' },
-    { name: 'Features', href: '/features' },
-    { name: 'Pricing', href: '/pricing' },
-    { name: 'Results', href: '/results' },
-    { name: 'Blog', href: '/blog' },
-  ];
+  useEffect(() => { setMenuOpen(false); window.scrollTo(0, 0); }, [location]);
 
   return (
-    <div className="min-h-screen flex flex-col font-sans text-charcoal bg-white">
-      {/* Urgency Bar */}
-      <div className="bg-blue-electric text-white py-2 px-6 text-center text-xs font-bold tracking-wide z-[60] relative">
-        ⚡ Limited onboarding spots available this month — <Link to="/book-demo" className="underline hover:text-navy transition-colors">Secure yours now</Link>
+    <div className="min-h-screen flex flex-col bg-white">
+      {/* Top bar */}
+      <div className="bg-blue-electric text-white py-2 px-6 text-center text-xs font-bold">
+        <motion.span animate={{ opacity: [1, 0.7, 1] }} transition={{ duration: 2, repeat: Infinity }}>
+          ⚡
+        </motion.span>
+        {' '}Limited spots available — <Link to="/signup" className="underline">Start free today</Link>
       </div>
 
-      {/* Header */}
-      <header
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          isScrolled ? 'bg-white/95 backdrop-blur-md shadow-md py-2 mt-0' : 'bg-transparent py-5 mt-8'
-        }`}
-      >
-        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link to="/" className="flex items-center">
-              <img src="/logo.png" alt="ClosePro Remodel" className="h-14 w-auto" />
+      {/* Navbar */}
+      <header className={`fixed top-8 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-white/95 backdrop-blur-md shadow-md py-3 top-0' : 'py-4'}`}>
+        <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
+          <Link to="/"><img src="/logo.png" alt="ClosePro" className="h-12 w-auto" /></Link>
+
+          {/* Desktop */}
+          <div className="hidden md:flex items-center gap-4">
+            <a href="#demo" className="text-sm font-bold text-navy/70 hover:text-blue-electric transition-colors">See Demo</a>
+            <a href="#pricing" className="text-sm font-bold text-navy/70 hover:text-blue-electric transition-colors">Pricing</a>
+            <Link to="/login" className="text-sm font-bold text-navy/70 hover:text-blue-electric transition-colors">Log In</Link>
+            <Link to="/signup" className="bg-blue-electric text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-navy transition-all shadow-lg shadow-blue-electric/20">
+              Start Free Trial
             </Link>
           </div>
 
-          {/* Desktop Nav */}
-          <nav className="hidden lg:flex items-center gap-8">
-            {navLinks.map((link) => (
-              <Link
-                key={link.name}
-                to={link.href}
-                className="text-sm font-bold text-navy/80 hover:text-blue-electric transition-colors"
-              >
-                {link.name}
-              </Link>
-            ))}
-            <div className="flex items-center gap-3 border-l border-gray-200 pl-6">
-              <Link
-                to="/ai-demo"
-                className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-blue-electric/10 border border-blue-electric/20 text-blue-electric text-sm font-bold hover:bg-blue-electric hover:text-white transition-all"
-                onClick={() => trackEvent('nav_ai_demo_click')}
-              >
-                <Zap size={13} fill="currentColor" /> Try AI Free
-              </Link>
-              <Link
-                to="/book-demo"
-                className="btn-primary py-2 px-5 text-sm"
-                onClick={() => trackEvent('header_cta_click', { location: 'desktop_nav' })}
-              >
-                Book Demo
-              </Link>
-            </div>
-          </nav>
-
-          {/* Mobile Menu Toggle */}
-          <div className="flex items-center gap-4 lg:hidden">
-            <Link 
-              to="/book-demo" 
-              className="btn-primary py-1.5 px-4 text-xs sm:hidden"
-              onClick={() => trackEvent('header_cta_click', { location: 'mobile_nav_top' })}
-            >
-              Book My Demo
-            </Link>
-            <button
-              className="text-navy"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-            >
-              {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
-            </button>
-          </div>
+          {/* Mobile */}
+          <button className="md:hidden p-2" onClick={() => setMenuOpen(v => !v)}>
+            {menuOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
         </div>
 
-        {/* Mobile Nav */}
         <AnimatePresence>
-          {isMenuOpen && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="md:hidden bg-white border-b border-gray-100 overflow-hidden"
-            >
-              <div className="flex flex-col p-6 gap-4">
-                {navLinks.map((link) => (
-                  <Link
-                    key={link.name}
-                    to={link.href}
-                    className="text-lg font-medium text-navy py-2 border-b border-gray-50"
-                  >
-                    {link.name}
-                  </Link>
-                ))}
-                <Link 
-                  to="/book-demo" 
-                  className="btn-primary text-center mt-2"
-                  onClick={() => trackEvent('header_cta_click', { location: 'mobile_nav_menu' })}
-                >
-                  Book My Demo
-                </Link>
-              </div>
+          {menuOpen && (
+            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+              className="md:hidden bg-white border-t border-gray-100 px-6 py-4 space-y-3">
+              <a href="#demo" className="block text-sm font-bold text-navy py-2">See Demo</a>
+              <a href="#pricing" className="block text-sm font-bold text-navy py-2">Pricing</a>
+              <Link to="/login" className="block text-sm font-bold text-navy py-2">Log In</Link>
+              <Link to="/signup" className="block bg-blue-electric text-white px-5 py-3 rounded-xl font-bold text-sm text-center">
+                Start Free Trial
+              </Link>
             </motion.div>
           )}
         </AnimatePresence>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-grow pt-28">
-        {children}
-      </main>
-
-      {/* Sticky CTA (Mobile/Desktop) */}
-      <AnimatePresence>
-        {isScrolled && (
-          <motion.div
-            initial={{ y: 100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 100, opacity: 0 }}
-            className="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-4"
-          >
-            <Link 
-              to="/book-demo" 
-              className="btn-primary shadow-2xl flex items-center gap-2 px-8 py-4"
-              onClick={() => trackEvent('sticky_cta_click')}
-            >
-              Book My Demo <ChevronRight size={20} />
-            </Link>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Scroll CTA Bar (Top) */}
-      <AnimatePresence>
-        {showScrollCTA && (
-          <motion.div
-            initial={{ y: -100 }}
-            animate={{ y: 0 }}
-            exit={{ y: -100 }}
-            className="fixed top-0 left-0 right-0 z-[70] bg-navy text-white py-3 px-6 shadow-2xl flex items-center justify-center gap-6"
-          >
-            <p className="text-sm font-bold hidden md:block">Want More $20K+ Remodel Jobs?</p>
-            <Link 
-              to="/book-demo" 
-              className="btn-primary py-2 px-6 text-sm flex items-center gap-2"
-              onClick={() => trackEvent('scroll_bar_cta_click')}
-            >
-              Book Demo <ChevronRight size={16} />
-            </Link>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <main className="flex-1 pt-16">{children}</main>
 
       {/* Footer */}
-      <footer className="bg-navy text-white pt-20 pb-10">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
-            <div className="space-y-5">
-              <Link to="/">
-                <img src="/logo.png" alt="ClosePro Remodel" className="h-14 w-auto brightness-0 invert" />
-              </Link>
-              <p className="text-gray-400 text-sm leading-relaxed">
-                The all-in-one growth platform built for remodelers. Land more $10K–$50K jobs with AI, automation, and a CRM that fits your business.
-              </p>
-              <div className="text-gray-400 text-sm space-y-2">
-                <p className="flex items-center gap-2"><MapPin size={14} className="text-blue-electric" /> 123 Growth Way, Austin, TX 78701</p>
-                <p className="flex items-center gap-2"><Phone size={14} className="text-blue-electric" /> (800) 555-0123</p>
-                <p className="flex items-center gap-2"><MessageSquare size={14} className="text-blue-electric" />
-                  <a href="mailto:hello@closeproremodel.com" className="hover:text-white transition-colors">hello@closeproremodel.com</a>
-                </p>
-              </div>
-              <div className="flex gap-3 pt-1">
-                <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook"
-                  className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center hover:bg-blue-electric transition-colors text-xs font-bold">f</a>
-                <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram"
-                  className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center hover:bg-blue-electric transition-colors text-xs font-bold">in</a>
-                <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"
-                  className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center hover:bg-blue-electric transition-colors text-xs font-bold">li</a>
-                <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" aria-label="YouTube"
-                  className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center hover:bg-blue-electric transition-colors text-xs font-bold">yt</a>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="font-bold text-lg mb-6">Solutions</h4>
-              <ul className="space-y-3 text-gray-400 text-sm">
-                <li><Link to="/kitchen-remodeling-leads" className="hover:text-white transition-colors">Kitchen Remodeling Leads</Link></li>
-                <li><Link to="/bathroom-remodeling-leads" className="hover:text-white transition-colors">Bathroom Remodeling Leads</Link></li>
-                <li><Link to="/home-remodeling-leads" className="hover:text-white transition-colors">Home Remodeling Leads</Link></li>
-                <li><Link to="/general-contractor-crm" className="hover:text-white transition-colors">General Contractor CRM</Link></li>
-                <li><Link to="/ai-remodel-visualizer" className="hover:text-white transition-colors">AI Remodel Visualizer</Link></li>
-                <li><Link to="/features" className="hover:text-white transition-colors">All Features</Link></li>
-                <li><Link to="/pricing" className="hover:text-white transition-colors">Pricing</Link></li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-bold text-lg mb-6">Company</h4>
-              <ul className="space-y-3 text-gray-400 text-sm">
-                <li><Link to="/about" className="hover:text-white transition-colors">About Us</Link></li>
-                <li><Link to="/how-it-works" className="hover:text-white transition-colors">How It Works</Link></li>
-                <li><Link to="/results" className="hover:text-white transition-colors">Client Results</Link></li>
-                <li><Link to="/blog" className="hover:text-white transition-colors">Blog</Link></li>
-                <li><Link to="/contact" className="hover:text-white transition-colors">Contact</Link></li>
-                <li><Link to="/faq" className="hover:text-white transition-colors">FAQ</Link></li>
-                <li><Link to="/login" className="hover:text-white transition-colors">Client Login</Link></li>
-              </ul>
-            </div>
-
-            <div className="space-y-6">
-              <div>
-                <h4 className="font-bold text-lg mb-2">Stay in the Loop</h4>
-                <p className="text-gray-400 text-sm mb-4">
-                  Weekly growth tips for remodelers. No spam, ever.
-                </p>
-                <form className="space-y-3" onSubmit={(e) => e.preventDefault()}>
-                  <input
-                    type="email"
-                    required
-                    placeholder="your@email.com"
-                    className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder:text-white/40 text-sm outline-none focus:bg-white/15 focus:border-white/40 transition-all"
-                  />
-                  <button
-                    type="submit"
-                    className="w-full py-3 bg-blue-electric text-white rounded-lg text-sm font-bold hover:bg-blue-electric/90 transition-all"
-                  >
-                    Subscribe Free
-                  </button>
-                </form>
-              </div>
-              <Link
-                to="/book-demo"
-                className="btn-primary inline-flex items-center gap-2 w-full justify-center"
-                onClick={() => trackEvent('footer_cta_click')}
-              >
-                Book My Demo <ChevronRight size={16} />
-              </Link>
-            </div>
+      <footer className="bg-navy text-white py-12 px-6">
+        <div className="max-w-6xl mx-auto grid md:grid-cols-3 gap-8">
+          <div className="space-y-3">
+            <img src="/logo.png" alt="ClosePro" className="h-10 w-auto brightness-0 invert" />
+            <p className="text-gray-400 text-sm">The AI remodel visualizer contractors add to their website to close more jobs.</p>
           </div>
-
-          <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-gray-500">
-            <p>© 2026 ClosePro Remodel. All rights reserved.</p>
-            <div className="flex gap-6">
-              <Link to="/privacy" className="hover:text-white">Privacy Policy</Link>
-              <Link to="/terms" className="hover:text-white">Terms of Service</Link>
-              <Link to="/contact" className="hover:text-white">Contact</Link>
-            </div>
+          <div className="space-y-2">
+            <p className="font-bold text-sm uppercase tracking-wider text-gray-400">Product</p>
+            <a href="#demo" className="block text-sm text-gray-300 hover:text-white transition-colors">Live Demo</a>
+            <a href="#pricing" className="block text-sm text-gray-300 hover:text-white transition-colors">Pricing</a>
+            <Link to="/login" className="block text-sm text-gray-300 hover:text-white transition-colors">Contractor Login</Link>
           </div>
+          <div className="space-y-2">
+            <p className="font-bold text-sm uppercase tracking-wider text-gray-400">Legal</p>
+            <Link to="/privacy" className="block text-sm text-gray-300 hover:text-white transition-colors">Privacy Policy</Link>
+            <Link to="/terms" className="block text-sm text-gray-300 hover:text-white transition-colors">Terms of Service</Link>
+          </div>
+        </div>
+        <div className="max-w-6xl mx-auto mt-8 pt-8 border-t border-white/10 text-center text-xs text-gray-500">
+          © {new Date().getFullYear()} ClosePro Remodel. All rights reserved.
         </div>
       </footer>
     </div>

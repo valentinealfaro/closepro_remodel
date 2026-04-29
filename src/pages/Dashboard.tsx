@@ -33,17 +33,11 @@ import { useAuth } from '../lib/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { AutomationService } from '../services/AutomationService';
 
-import AIVisualizer from '../components/AIVisualizer';
 import LeadsManager from '../components/LeadsManager';
-import CRMPipeline from '../components/CRMPipeline';
-import WebsiteEditor from '../components/WebsiteEditor';
-import AutomationEngine from '../components/AutomationEngine';
-import EstimatesManager from '../components/EstimatesManager';
-import InvoiceManager from '../components/InvoiceManager';
-import ProjectManager from '../components/ProjectManager';
-import AdsManager from '../components/AdsManager';
 import AdminPanel from '../components/AdminPanel';
 import AgentsPanel from '../components/AgentsPanel';
+import EmbedCodePanel from '../components/EmbedCodePanel';
+import ProjectsPanel from '../components/ProjectsPanel';
 
 // ─── Account Settings Page ─────────────────────────────────────────────────
 
@@ -561,16 +555,13 @@ const Overview = () => {
           <h3 className="font-bold text-navy mb-5">Quick Actions</h3>
           <div className="grid grid-cols-2 gap-3">
             {[
-              { label: 'Add New Lead', icon: '➕', to: '/app/leads' },
-              { label: 'Create Estimate', icon: '📄', to: '/app/estimates' },
-              { label: 'View Pipeline', icon: '📊', to: '/app/pipeline' },
-              { label: 'AI Visualizer', icon: '🤖', to: '/app/visualizer' }
+              { label: 'View Leads', icon: '📥', to: '/app/leads' },
+              { label: 'Saved Projects', icon: '📁', to: '/app/projects' },
+              { label: 'Get Embed Code', icon: '🔗', to: '/app/embed' },
+              { label: 'Account Settings', icon: '⚙️', to: '/app/settings' }
             ].map((action, i) => (
-              <Link
-                key={i}
-                to={action.to}
-                className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-blue-electric hover:bg-blue-electric/5 transition-all group"
-              >
+              <Link key={i} to={action.to}
+                className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-blue-electric hover:bg-blue-electric/5 transition-all group">
                 <span className="text-xl">{action.icon}</span>
                 <span className="text-sm font-bold text-navy group-hover:text-blue-electric">{action.label}</span>
               </Link>
@@ -578,27 +569,13 @@ const Overview = () => {
           </div>
         </div>
 
-        {/* Revenue Chart Placeholder */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-navy">Revenue This Month</h3>
-            <span className="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded-full">+15% vs last month</span>
-          </div>
-          <div className="flex items-end gap-2 h-32">
-            {[40, 65, 45, 80, 55, 90, 70, 85, 60, 95, 75, 100].map((h, i) => (
-              <div
-                key={i}
-                className="flex-1 bg-blue-electric/20 hover:bg-blue-electric/40 rounded-t transition-all cursor-pointer"
-                style={{ height: `${h}%` }}
-                title={`Week ${i + 1}`}
-              />
-            ))}
-          </div>
-          <div className="flex justify-between mt-2 text-xs text-gray-400">
-            <span>Apr 1</span>
-            <span>Apr 15</span>
-            <span>Apr 28</span>
-          </div>
+        {/* Embed code CTA */}
+        <div className="bg-navy p-6 rounded-xl text-white space-y-3">
+          <h3 className="font-bold">🔗 Add the Widget to Your Website</h3>
+          <p className="text-gray-300 text-sm">Copy your embed code and paste it on any page of your contractor website to start capturing AI remodel leads.</p>
+          <Link to="/app/embed" className="inline-flex items-center gap-2 bg-blue-electric text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-blue-600 transition-all">
+            Get My Embed Code →
+          </Link>
         </div>
       </div>
     </div>
@@ -636,14 +613,6 @@ export default function Dashboard() {
     setIsMobileNavOpen(false);
   }, [location.pathname]);
 
-  // Check for pending automations periodically
-  useEffect(() => {
-    if (!userData?.tenantId) return;
-    const check = () => AutomationService.checkPending(userData.tenantId);
-    check();
-    const interval = setInterval(check, 60000);
-    return () => clearInterval(interval);
-  }, [userData?.tenantId]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -657,22 +626,16 @@ export default function Dashboard() {
 
   const navItems = (isSuperAdmin && !isImpersonating)
     ? [
-        { to: '/app', icon: ShieldCheck, label: 'Super Admin Dashboard' },
+        { to: '/app', icon: ShieldCheck, label: 'Super Admin' },
         { to: '/app/agents', icon: Bot, label: 'AI Agents' },
-        { to: '/app/settings', icon: Settings, label: 'System Settings' },
+        { to: '/app/settings', icon: Settings, label: 'Settings' },
       ]
     : [
         { to: '/app', icon: LayoutDashboard, label: 'Overview' },
         { to: '/app/leads', icon: Users, label: 'Leads' },
-        { to: '/app/pipeline', icon: Kanban, label: 'Pipeline' },
-        { to: '/app/estimates', icon: FileText, label: 'Estimates' },
-        { to: '/app/invoices', icon: DollarSign, label: 'Invoices' },
-        { to: '/app/projects', icon: BriefcaseIcon, label: 'Projects' },
-        { to: '/app/marketing', icon: Megaphone, label: 'Marketing' },
-        { to: '/app/visualizer', icon: ImageIcon, label: 'AI Visualizer' },
-        { to: '/app/website', icon: Globe, label: 'Website' },
-        { to: '/app/automation', icon: Zap, label: 'Automation' },
-        { to: '/app/settings', icon: Settings, label: 'Settings' },
+        { to: '/app/projects', icon: BriefcaseIcon, label: 'Saved Projects' },
+        { to: '/app/embed', icon: Globe, label: 'Embed Code' },
+        { to: '/app/settings', icon: Settings, label: 'Account' },
       ];
 
   const SidebarContent = ({ collapsed = false }: { collapsed?: boolean }) => (
@@ -848,21 +811,11 @@ export default function Dashboard() {
           <Routes>
             <Route path="/" element={<Overview />} />
             <Route path="/leads" element={<LeadsManager />} />
-            <Route path="/pipeline" element={<CRMPipeline />} />
-            <Route path="/estimates" element={<EstimatesManager />} />
-            <Route path="/invoices" element={<InvoiceManager />} />
-            <Route path="/projects" element={<ProjectManager />} />
-            <Route path="/marketing" element={<AdsManager />} />
-            <Route path="/visualizer" element={<AIVisualizer />} />
+            <Route path="/projects" element={<ProjectsPanel />} />
+            <Route path="/embed" element={<EmbedCodePanel />} />
             <Route path="/agents" element={<AgentsPanel />} />
-            <Route path="/website" element={<WebsiteEditor />} />
-            <Route path="/automation" element={<AutomationEngine />} />
             <Route path="/settings" element={
-              isSuperAdmin && !isImpersonating ? (
-                <AdminPanel initialTab="settings" />
-              ) : (
-                <AccountSettings />
-              )
+              isSuperAdmin && !isImpersonating ? <AdminPanel initialTab="settings" /> : <AccountSettings />
             } />
           </Routes>
         </div>
