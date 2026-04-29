@@ -1,8 +1,29 @@
 import { motion, AnimatePresence, useInView } from 'motion/react';
-import { ChevronRight, Star, CheckCircle2, ArrowRight, Zap, BarChart3, Users, Layout as LayoutIcon, MessageSquare, FileText, X, Phone, ArrowUpRight, TrendingUp, Shield, Clock } from 'lucide-react';
+import { ChevronRight, Star, CheckCircle2, ArrowRight, Zap, BarChart3, Users, Layout as LayoutIcon, MessageSquare, FileText, X, ArrowUpRight, TrendingUp, Shield, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import { trackEvent } from '../lib/tracking';
+import TerminalAI from '../components/TerminalAI';
+
+// ── 3D Tilt Hook ──────────────────────────────────────────────────────────────
+function useTilt() {
+  const ref = useRef<HTMLDivElement>(null);
+  const onMouseMove = (e: React.MouseEvent) => {
+    const el = ref.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width - 0.5) * 16;
+    const y = ((e.clientY - rect.top) / rect.height - 0.5) * -16;
+    el.style.transform = `perspective(800px) rotateX(${y}deg) rotateY(${x}deg) translateZ(12px)`;
+    el.style.boxShadow = `${-x}px ${y}px 30px rgba(30,144,255,0.15)`;
+  };
+  const onMouseLeave = () => {
+    if (!ref.current) return;
+    ref.current.style.transform = 'perspective(800px) rotateX(0) rotateY(0) translateZ(0)';
+    ref.current.style.boxShadow = '';
+  };
+  return { ref, onMouseMove, onMouseLeave };
+}
 
 // ── Animated Counter ─────────────────────────────────────────────────────────
 function Counter({ to, prefix = '', suffix = '' }: { to: number; prefix?: string; suffix?: string }) {
@@ -117,7 +138,7 @@ export default function Home() {
             <div className="flex flex-col sm:flex-row gap-4">
               <Link to="/book-demo"
                 onClick={() => trackEvent('hero_cta_click')}
-                className="group relative overflow-hidden bg-blue-electric text-white px-8 py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 shadow-2xl shadow-blue-electric/40 hover:shadow-blue-electric/60 transition-all hover:scale-105 active:scale-95">
+                className="btn-shimmer group relative overflow-hidden px-8 py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 shadow-2xl shadow-blue-electric/40">
                 <motion.span animate={{ x: [0, 3, 0] }} transition={{ duration: 1.5, repeat: Infinity }}>
                   👉
                 </motion.span>
@@ -284,24 +305,28 @@ export default function Home() {
               { icon: MessageSquare, title: 'Automated Follow-Ups', desc: 'Auto SMS and email sequences that nurture leads until they\'re ready to sign.', result: 'Response in 60s', color: 'from-orange-400 to-orange-600', bg: 'bg-orange-50', text: 'text-orange-600' },
               { icon: FileText, title: 'Estimates & Invoices', desc: 'Professional estimates that get approved faster and invoices that get paid on time.', result: 'Paid 2x faster', color: 'from-teal-400 to-teal-600', bg: 'bg-teal-50', text: 'text-teal-600' },
               { icon: Users, title: 'Demo Booking Tools', desc: 'Let customers book consultations directly to your calendar while you sleep.', result: 'More demos booked', color: 'from-pink-400 to-pink-600', bg: 'bg-pink-50', text: 'text-pink-600' },
-            ].map((feature, i) => (
-              <motion.div key={i}
-                initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }} transition={{ delay: i * 0.08 }}
-                whileHover={{ y: -8 }}
-                className="group relative bg-white rounded-2xl border border-gray-100 p-8 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden">
-                {/* Top gradient bar */}
-                <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${feature.color}`} />
-                <div className={`w-14 h-14 ${feature.bg} ${feature.text} rounded-2xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform shadow-sm`}>
-                  <feature.icon size={24} />
-                </div>
-                <h3 className="text-xl font-bold text-navy mb-3">{feature.title}</h3>
-                <p className="text-gray-500 text-sm leading-relaxed mb-5">{feature.desc}</p>
-                <div className={`inline-flex items-center gap-1.5 ${feature.text} font-bold text-xs bg-opacity-10 ${feature.bg} px-3 py-1.5 rounded-full`}>
-                  <CheckCircle2 size={13} /> {feature.result}
-                </div>
-              </motion.div>
-            ))}
+            ].map((feature, i) => {
+              // eslint-disable-next-line react-hooks/rules-of-hooks
+              const tilt = useTilt();
+              return (
+                <motion.div key={i}
+                  initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }} transition={{ delay: i * 0.08 }}>
+                  <div ref={tilt.ref} onMouseMove={tilt.onMouseMove} onMouseLeave={tilt.onMouseLeave}
+                    className="card-3d group relative bg-white rounded-2xl border border-gray-100 p-8 shadow-sm overflow-hidden h-full cursor-default">
+                    <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${feature.color}`} />
+                    <div className={`w-14 h-14 ${feature.bg} ${feature.text} rounded-2xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform shadow-sm`}>
+                      <feature.icon size={24} />
+                    </div>
+                    <h3 className="text-xl font-bold text-navy mb-3">{feature.title}</h3>
+                    <p className="text-gray-500 text-sm leading-relaxed mb-5">{feature.desc}</p>
+                    <div className={`inline-flex items-center gap-1.5 ${feature.text} font-bold text-xs ${feature.bg} px-3 py-1.5 rounded-full`}>
+                      <CheckCircle2 size={13} /> {feature.result}
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -406,6 +431,66 @@ export default function Home() {
             <Link to="/how-it-works" className="inline-flex items-center gap-2 text-blue-electric font-bold text-lg hover:gap-4 transition-all">
               See Full Walkthrough <ArrowRight size={22} />
             </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ── TERMINAL AI SECTION ──────────────────────────────────────────────── */}
+      <section className="section-padding bg-navy relative overflow-hidden">
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(30,144,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(30,144,255,0.03)_1px,transparent_1px)] bg-[size:30px_30px]" />
+        <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.2, 0.4, 0.2] }}
+          transition={{ duration: 6, repeat: Infinity }}
+          className="absolute top-10 right-10 w-96 h-96 bg-blue-electric/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto relative z-10">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            {/* Left */}
+            <motion.div initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }} className="space-y-8">
+              <div>
+                <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-green-500/20 border border-green-500/30 text-green-400 rounded-full text-sm font-bold mb-6">
+                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                  LIVE AI PIPELINE
+                </span>
+                <h2 className="text-4xl md:text-5xl font-bold text-white leading-tight mb-6">
+                  Your AI Works{' '}
+                  <span className="text-gradient">24/7</span>{' '}
+                  While You Sleep
+                </h2>
+                <p className="text-gray-400 text-xl leading-relaxed">
+                  Watch ClosePro AI automatically track your leads, send follow-ups, score opportunities, and book demos — all without you lifting a finger.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                {[
+                  { icon: '⚡', text: 'Responds to every lead in under 60 seconds' },
+                  { icon: '🤖', text: 'AI scores and prioritizes your highest-value leads' },
+                  { icon: '📱', text: 'Auto-sends personalized SMS + email sequences' },
+                  { icon: '📅', text: 'Books demos directly to your calendar' },
+                ].map((item, i) => (
+                  <motion.div key={i} initial={{ opacity: 0, x: -10 }} whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }} transition={{ delay: i * 0.1 }}
+                    className="flex items-center gap-4 glass rounded-xl px-4 py-3">
+                    <span className="text-2xl">{item.icon}</span>
+                    <span className="text-gray-200 font-medium text-sm">{item.text}</span>
+                  </motion.div>
+                ))}
+              </div>
+
+              <Link to="/book-demo" className="btn-shimmer inline-flex items-center gap-2 px-8 py-4 text-lg">
+                See It Live <ChevronRight size={20} />
+              </Link>
+            </motion.div>
+
+            {/* Right — Terminal */}
+            <motion.div initial={{ opacity: 0, x: 20 }} whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }} transition={{ delay: 0.2 }}>
+              <TerminalAI />
+              <p className="text-center text-gray-500 text-xs mt-4 font-mono">
+                ↑ Live simulation of ClosePro AI managing your pipeline
+              </p>
+            </motion.div>
           </div>
         </div>
       </section>
@@ -667,10 +752,10 @@ export default function Home() {
               ))}
             </div>
 
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}>
+            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
               <Link to="/book-demo"
                 onClick={() => trackEvent('final_cta_click')}
-                className="inline-flex items-center gap-3 bg-blue-electric text-white px-12 py-6 rounded-2xl font-black text-2xl shadow-2xl shadow-blue-electric/50 hover:bg-blue-electric/90 transition-all">
+                className="btn-shimmer inline-flex items-center gap-3 px-12 py-6 rounded-2xl font-black text-2xl shadow-2xl shadow-blue-electric/50">
                 <motion.span animate={{ rotate: [0, 10, -10, 0] }} transition={{ duration: 1.5, repeat: Infinity }}>👉</motion.span>
                 Book My Free Demo
                 <ChevronRight size={28} />
