@@ -160,7 +160,7 @@ function LiveDemo() {
       const res = await fetch('/api/generate-remodel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64: base64, mimeType, roomType: room, style, budget: 'highend', mode: 'realistic', notes: 'Photorealistic contractor sales preview.' }),
+        body: JSON.stringify({ imageBase64: base64, mimeType, roomType: room, style, budget: 'highend', mode: 'realistic', notes: notes || 'Photorealistic remodel preview.' }),
       });
       clearInterval(interval);
       setGenStep(GEN_STEPS.length); setProgress(100);
@@ -238,6 +238,20 @@ function LiveDemo() {
               {s.label}
             </button>
           ))}
+        </div>
+
+        {/* Custom requests */}
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-black text-gray-500 uppercase tracking-wider">
+            What do you want? <span className="font-normal normal-case text-gray-600">(optional)</span>
+          </label>
+          <textarea
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+            rows={2}
+            placeholder="e.g. White shaker cabinets, quartz countertops, subway tile backsplash, open shelving..."
+            className="w-full px-3 py-2.5 bg-white/10 border border-white/10 rounded-xl text-white placeholder:text-gray-500 text-xs focus:outline-none focus:border-blue-electric resize-none"
+          />
         </div>
 
         <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
