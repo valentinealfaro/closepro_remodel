@@ -250,6 +250,22 @@ service cloud.firestore {
       }
     }
 
+    // ── Public lead capture (no auth required) ───────────────────────────────
+    // These collections receive form submissions from unauthenticated visitors
+    match /demoRequests/{doc} {
+      allow create: if true;
+    }
+    match /aiDemoLeads/{doc} {
+      allow create: if true;
+    }
+    match /contactSubmissions/{doc} {
+      allow create: if true;
+    }
+    match /agentBatchRuns/{doc} {
+      allow create: if isAuthenticated();
+      allow read: if isSuperAdmin();
+    }
+
     // Default deny
     match /{document=**} {
       allow read, write: if false;
