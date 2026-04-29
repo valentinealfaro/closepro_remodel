@@ -1,6 +1,6 @@
 import { ReactNode, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, ChevronRight, Phone, MapPin, MessageSquare } from 'lucide-react';
+import { Menu, X, ChevronRight, Phone, MapPin, MessageSquare, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { trackEvent } from '../lib/tracking';
 
