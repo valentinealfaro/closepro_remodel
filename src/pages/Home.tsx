@@ -137,8 +137,8 @@ async function fetchUrlBase64(url: string): Promise<{ base64: string; mimeType: 
 }
 
 const DEMO_SAMPLES: Record<string, string> = {
-  kitchen:  'https://picsum.photos/seed/kitchen-old-before/1200/900',
-  bathroom: 'https://picsum.photos/seed/bath-old-before/1200/900',
+  kitchen:  '/samples/kitchen.jpg',
+  bathroom: '/samples/bathroom.jpg',
 };
 
 const DEMO_KITCHEN_STYLES = [
@@ -541,8 +541,8 @@ function HomeDemoSection() {
 
 // ── OLD hero constants removed — replaced by HomeDemoSection above ─────────────
 const HERO_SAMPLES: Record<string, string> = {
-  kitchen:  'https://picsum.photos/seed/kitchen-old-before/800/600',
-  bathroom: 'https://picsum.photos/seed/bath-old-before/800/600',
+  kitchen:  '/samples/kitchen.jpg',
+  bathroom: '/samples/bathroom.jpg',
   living:   'https://picsum.photos/seed/living-old-before/800/600',
   exterior: 'https://picsum.photos/seed/ext-old-before/800/600',
 };
