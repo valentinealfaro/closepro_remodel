@@ -1,7 +1,9 @@
 import { motion, AnimatePresence, useInView } from 'motion/react';
-import { ChevronRight, Star, CheckCircle2, ArrowRight, Zap, BarChart3, Users, Layout as LayoutIcon, MessageSquare, FileText, X, ArrowUpRight, TrendingUp, Shield, Clock, Wand2 } from 'lucide-react';
+import { ChevronRight, Star, CheckCircle2, ArrowRight, Zap, BarChart3, Users, Layout as LayoutIcon, MessageSquare, FileText, X, ArrowUpRight, TrendingUp, Shield, Clock, Wand2, Upload, Download, Lock, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { trackEvent } from '../lib/tracking';
 import TerminalAI from '../components/TerminalAI';
 
@@ -99,8 +101,445 @@ function Marquee() {
   );
 }
 
-// ── Hero AI Generator ─────────────────────────────────────────────────────────
+// ── Home Demo Section helpers ─────────────────────────────────────────────────
 
+async function compressForDemo(file: File, maxSide = 1024): Promise<{ base64: string; mimeType: string }> {
+  return new Promise(resolve => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const ratio = Math.min(maxSide / img.width, maxSide / img.height, 1);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * ratio);
+      canvas.height = Math.round(img.height * ratio);
+      canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+      const [prefix, data] = dataUrl.split(',');
+      resolve({ base64: data, mimeType: prefix.match(/:(.*?);/)?.[1] || 'image/jpeg' });
+    };
+    img.src = url;
+  });
+}
+
+async function fetchUrlBase64(url: string): Promise<{ base64: string; mimeType: string }> {
+  const res = await fetch(url);
+  const blob = await res.blob();
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      const [prefix, data] = dataUrl.split(',');
+      resolve({ base64: data, mimeType: prefix.match(/:(.*?);/)?.[1] || 'image/jpeg' });
+    };
+    reader.readAsDataURL(blob);
+  });
+}
+
+const DEMO_SAMPLES: Record<string, string> = {
+  kitchen:  'https://picsum.photos/seed/kitchen-old-before/1200/900',
+  bathroom: 'https://picsum.photos/seed/bath-old-before/1200/900',
+};
+
+const DEMO_KITCHEN_STYLES = [
+  { id: 'modern',       label: 'Modern',          desc: 'Clean & sleek' },
+  { id: 'luxury',       label: 'Luxury',           desc: 'Premium finishes' },
+  { id: 'farmhouse',    label: 'Farmhouse',        desc: 'Warm & cozy' },
+  { id: 'traditional',  label: 'Traditional',      desc: 'Timeless classic' },
+  { id: 'contemporary', label: 'Contemporary',     desc: 'Bold contrast' },
+  { id: 'budget',       label: 'Budget-Friendly',  desc: 'Smart & clean' },
+];
+
+const DEMO_BATHROOM_STYLES = [
+  { id: 'modern',      label: 'Modern',       desc: 'Clean & minimal' },
+  { id: 'luxury',      label: 'Spa Luxury',   desc: 'Hotel-inspired' },
+  { id: 'minimalist',  label: 'Minimalist',   desc: 'Simple & open' },
+  { id: 'traditional', label: 'Traditional',  desc: 'Classic polish' },
+  { id: 'budget',      label: 'Budget',       desc: 'Affordable update' },
+  { id: 'bold',        label: 'Bold / Dark',  desc: 'High contrast' },
+];
+
+const DEMO_BUDGETS = [
+  { id: 'basic',    label: 'Basic',     range: '$5K–$15K' },
+  { id: 'midrange', label: 'Mid-Range', range: '$15K–$35K' },
+  { id: 'highend',  label: 'High-End',  range: '$35K–$75K' },
+  { id: 'luxury',   label: 'Luxury',    range: '$75K+' },
+];
+
+const DEMO_GEN_STEPS = [
+  'Analyzing room dimensions & layout...',
+  'Preserving camera angle & perspective...',
+  'Applying style parameters...',
+  'Generating photorealistic preview...',
+  '✓ Visualization complete!',
+];
+
+function DemoSlider({ before, after }: { before: string; after: string }) {
+  const [pos, setPos] = useState(50);
+  return (
+    <div className="relative w-full h-full min-h-[380px] select-none">
+      <img src={before} alt="Before" className="absolute inset-0 w-full h-full object-cover" referrerPolicy="no-referrer" />
+      <div className="absolute inset-0 overflow-hidden" style={{ clipPath: `inset(0 0 0 ${pos}%)` }}>
+        <img src={after} alt="After" className="absolute inset-0 w-full h-full object-cover" referrerPolicy="no-referrer" />
+        <div className="absolute top-4 right-4 bg-blue-electric text-white text-xs font-black px-3 py-1 rounded-full shadow-lg">AI Result</div>
+        <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-25">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="absolute text-white font-bold text-sm whitespace-nowrap"
+              style={{ transform: 'rotate(-30deg)', top: `${i * 22 - 5}%`, left: '-10%', right: '-10%', textAlign: 'center', letterSpacing: '0.3em' }}>
+              CLOSEPRO DEMO &nbsp;&nbsp;&nbsp; CLOSEPRO DEMO &nbsp;&nbsp;&nbsp; CLOSEPRO DEMO
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="absolute inset-y-0 z-20 cursor-ew-resize" style={{ left: `${pos}%` }}>
+        <div className="absolute inset-y-0 w-0.5 bg-white shadow-xl" />
+        <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-12 h-12 bg-white rounded-full shadow-2xl flex items-center justify-center border-4 border-blue-electric">
+          <div className="flex gap-0.5"><div className="w-1 h-5 bg-blue-electric rounded-full" /><div className="w-1 h-5 bg-blue-electric rounded-full" /></div>
+        </div>
+      </div>
+      <div className="absolute top-4 left-4 bg-black/70 text-white text-xs font-bold px-3 py-1.5 rounded-lg uppercase tracking-widest">Before</div>
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur text-white text-xs font-bold px-4 py-2 rounded-full whitespace-nowrap">← drag to compare →</div>
+      <input type="range" min="0" max="100" value={pos} onChange={e => setPos(Number(e.target.value))}
+        className="absolute inset-0 w-full h-full opacity-0 cursor-ew-resize z-30" />
+    </div>
+  );
+}
+
+function HomeDemoSection() {
+  const [tab, setTab]           = useState<'sample' | 'upload'>('sample');
+  const [room, setRoom]         = useState<'kitchen' | 'bathroom'>('kitchen');
+  const [style, setStyle]       = useState('modern');
+  const [budget, setBudget]     = useState('midrange');
+  const [notes, setNotes]       = useState('');
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl]     = useState<string | null>(null);
+  const [isDragging, setIsDragging]     = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const [phase, setPhase]           = useState<'idle' | 'generating' | 'done' | 'error'>('idle');
+  const [genStep, setGenStep]       = useState(0);
+  const [genProgress, setGenProgress] = useState(0);
+  const [resultSrc, setResultSrc]   = useState<string | null>(null);
+  const [errorMsg, setErrorMsg]     = useState('');
+
+  const [email, setEmail]         = useState('');
+  const [name, setName]           = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [captured, setCaptured]   = useState(false);
+
+  const styles    = room === 'kitchen' ? DEMO_KITCHEN_STYLES : DEMO_BATHROOM_STYLES;
+  const beforeImg = (tab === 'upload' && previewUrl) ? previewUrl : DEMO_SAMPLES[room];
+
+  const handleFile = useCallback((file: File) => {
+    if (!file.type.startsWith('image/')) return;
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(URL.createObjectURL(file));
+    setUploadedFile(file);
+    setTab('upload');
+  }, [previewUrl]);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault(); setIsDragging(false);
+    const f = e.dataTransfer.files[0]; if (f) handleFile(f);
+  }, [handleFile]);
+
+  const reset = () => { setPhase('idle'); setResultSrc(null); setErrorMsg(''); setGenStep(0); setGenProgress(0); setCaptured(false); };
+
+  const generate = async () => {
+    if (phase === 'generating') return;
+    reset(); setPhase('generating');
+    const interval = setInterval(() => {
+      setGenStep(prev => {
+        const next = Math.min(prev + 1, DEMO_GEN_STEPS.length - 2);
+        setGenProgress(Math.round((next / DEMO_GEN_STEPS.length) * 85));
+        return next;
+      });
+    }, 900);
+    try {
+      let base64: string, mimeType: string;
+      if (tab === 'upload' && uploadedFile) {
+        ({ base64, mimeType } = await compressForDemo(uploadedFile));
+      } else {
+        ({ base64, mimeType } = await fetchUrlBase64(DEMO_SAMPLES[room]));
+      }
+      const res = await fetch('/api/generate-remodel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: base64, mimeType, roomType: room, style, budget, mode: 'realistic', notes: notes || 'Photorealistic remodel preview for contractor sales.' }),
+      });
+      clearInterval(interval);
+      setGenStep(DEMO_GEN_STEPS.length); setGenProgress(100);
+      if (!res.ok) { const e = await res.json().catch(() => ({})); setErrorMsg(e.message || e.error || 'Generation failed.'); setPhase('error'); return; }
+      const data = await res.json();
+      if (!data.imageData) { setErrorMsg('No image returned. Try uploading a clearer, well-lit photo.'); setPhase('error'); return; }
+      await new Promise(r => setTimeout(r, 400));
+      setResultSrc(`data:${data.mimeType || 'image/jpeg'};base64,${data.imageData}`);
+      setPhase('done');
+    } catch (err: any) {
+      clearInterval(interval);
+      setErrorMsg('Connection failed. Start the server with: npm run dev');
+      setPhase('error');
+    }
+  };
+
+  const handleCapture = async (e: React.FormEvent) => {
+    e.preventDefault(); setSubmitting(true);
+    try { await addDoc(collection(db, 'aiDemoLeads'), { email, name, roomType: room, style, budget, source: 'home-demo', createdAt: serverTimestamp() }); } catch {}
+    setCaptured(true); setSubmitting(false);
+  };
+
+  return (
+    <section id="try-it" className="bg-navy relative overflow-hidden py-20">
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(30,144,255,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(30,144,255,0.04)_1px,transparent_1px)] bg-[size:50px_50px]" />
+      <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.25, 0.1] }} transition={{ duration: 8, repeat: Infinity }}
+        className="absolute -top-40 right-0 w-[700px] h-[700px] bg-blue-electric/20 rounded-full blur-3xl pointer-events-none" />
+
+      <div className="max-w-7xl mx-auto px-6 relative z-10">
+        {/* Header */}
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+          className="text-center mb-12 space-y-5">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-electric/20 border border-blue-electric/30 text-blue-electric text-sm font-bold">
+            <motion.span animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1.5, repeat: Infinity }}><Wand2 size={14} /></motion.span>
+            TRY IT FREE — No Signup Required
+          </div>
+          <h2 className="text-4xl md:text-6xl font-black text-white leading-tight">
+            See Your Remodel <span className="text-blue-electric">Before You Build It</span>
+          </h2>
+          <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+            Upload a kitchen or bathroom photo. AI generates a photorealistic remodel concept in seconds —
+            the same tool contractors use to close $10K–$50K jobs on the first visit.
+          </p>
+        </motion.div>
+
+        {/* Two-panel demo */}
+        <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+          className="grid lg:grid-cols-[400px_1fr] gap-5">
+
+          {/* LEFT: Controls */}
+          <div className="bg-white/5 border border-white/10 rounded-3xl p-6 space-y-5">
+            {/* Photo tabs */}
+            <div className="flex gap-1 bg-black/30 rounded-xl p-1">
+              {[{ id: 'sample', label: '📷 Sample Photo' }, { id: 'upload', label: '⬆️ Upload Yours' }].map(t => (
+                <button key={t.id} onClick={() => { setTab(t.id as any); reset(); }}
+                  className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${tab === t.id ? 'bg-white text-navy shadow' : 'text-gray-400 hover:text-white'}`}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {tab === 'sample' ? (
+              <div className="grid grid-cols-2 gap-2">
+                {Object.entries(DEMO_SAMPLES).map(([key, url]) => (
+                  <button key={key} onClick={() => { setRoom(key as any); setStyle('modern'); reset(); }}
+                    className={`relative rounded-xl overflow-hidden border-2 transition-all ${room === key ? 'border-blue-electric shadow-lg shadow-blue-electric/30 scale-[1.03]' : 'border-white/10 hover:border-blue-electric/50'}`}>
+                    <img src={url} alt={key} className="w-full h-20 object-cover" referrerPolicy="no-referrer" />
+                    <div className="absolute bottom-0 inset-x-0 bg-black/70 text-white text-xs font-bold py-1 text-center capitalize">{key}</div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div
+                onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={handleDrop}
+                className={`relative border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all ${isDragging ? 'border-blue-electric bg-blue-electric/10' : previewUrl ? 'border-green-400 bg-green-400/10' : 'border-white/20 hover:border-blue-electric hover:bg-white/5'}`}
+                onClick={() => fileRef.current?.click()}>
+                {previewUrl
+                  ? <><img src={previewUrl} alt="Preview" className="w-full h-24 object-cover rounded-lg mb-2" /><p className="text-green-400 text-xs font-bold flex items-center justify-center gap-1"><CheckCircle2 size={12} /> Ready!</p></>
+                  : <><Upload size={22} className="text-gray-400 mx-auto mb-2" /><p className="text-white text-sm font-bold">Drop photo here</p><p className="text-gray-500 text-xs mt-1">JPG, PNG, WEBP · up to 20MB</p></>}
+                <input ref={fileRef} type="file" accept="image/*"
+                  style={{ position: 'absolute', opacity: 0, width: '1px', height: '1px', overflow: 'hidden' }}
+                  onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])} />
+              </div>
+            )}
+
+            {/* Room type */}
+            <div className="space-y-2">
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-wider">Room Type</p>
+              <div className="grid grid-cols-2 gap-2">
+                {[{ id: 'kitchen', label: '🍳 Kitchen' }, { id: 'bathroom', label: '🛁 Bathroom' }].map(r => (
+                  <button key={r.id} onClick={() => { setRoom(r.id as any); setStyle('modern'); reset(); }}
+                    className={`py-2.5 rounded-xl text-sm font-bold transition-all ${room === r.id ? 'bg-blue-electric text-white shadow-lg shadow-blue-electric/30' : 'bg-white/10 text-gray-300 hover:bg-white/20'}`}>
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Style */}
+            <div className="space-y-2">
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-wider">Remodel Style</p>
+              <div className="grid grid-cols-2 gap-1.5">
+                {styles.map(s => (
+                  <button key={s.id} onClick={() => { setStyle(s.id); if (phase === 'done') reset(); }}
+                    className={`px-3 py-2 rounded-xl text-left transition-all ${style === s.id ? 'bg-blue-electric text-white shadow-md' : 'bg-white/10 text-gray-300 hover:bg-white/20'}`}>
+                    <div className="text-xs font-bold leading-tight">{s.label}</div>
+                    <div className={`text-[10px] mt-0.5 ${style === s.id ? 'text-blue-100' : 'text-gray-500'}`}>{s.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Budget */}
+            <div className="space-y-2">
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-wider">Budget Level</p>
+              <div className="grid grid-cols-2 gap-1.5">
+                {DEMO_BUDGETS.map(b => (
+                  <button key={b.id} onClick={() => setBudget(b.id)}
+                    className={`px-3 py-2 rounded-xl text-left transition-all ${budget === b.id ? 'bg-blue-electric text-white shadow-md' : 'bg-white/10 text-gray-300 hover:bg-white/20'}`}>
+                    <div className="text-xs font-bold">{b.label}</div>
+                    <div className={`text-[10px] ${budget === b.id ? 'text-blue-100' : 'text-gray-500'}`}>{b.range}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Notes */}
+            <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2}
+              placeholder="Optional: e.g. white cabinets, open shelving, bright lighting..."
+              className="w-full px-3 py-2 bg-white/10 border border-white/10 rounded-xl text-white placeholder:text-gray-500 text-xs focus:outline-none focus:border-blue-electric resize-none" />
+
+            {/* Generate */}
+            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+              onClick={generate} disabled={phase === 'generating'}
+              className="btn-shimmer w-full py-4 rounded-xl font-black text-base flex items-center justify-center gap-2 disabled:opacity-60">
+              <Wand2 size={20} />
+              {phase === 'generating' ? 'Generating your remodel...' : 'Generate My Remodel →'}
+            </motion.button>
+            <p className="text-center text-[11px] text-gray-500">✓ No signup &nbsp;·&nbsp; ✓ Real AI &nbsp;·&nbsp; ✓ Free demo</p>
+          </div>
+
+          {/* RIGHT: Result */}
+          <div className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden flex flex-col min-h-[560px]">
+            <AnimatePresence mode="wait">
+
+              {phase === 'done' && resultSrc ? (
+                <motion.div key="done" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col h-full">
+                  <div className="flex-1"><DemoSlider before={beforeImg} after={resultSrc} /></div>
+                  {captured ? (
+                    <div className="p-5 border-t border-white/10 text-center space-y-3">
+                      <p className="text-green-400 font-bold">🎉 Unlocked! Check your email.</p>
+                      <div className="flex gap-3 justify-center flex-wrap">
+                        <a href={resultSrc} download="closepro-remodel.jpg"
+                          className="btn-shimmer px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2">
+                          <Download size={15} /> Download HD
+                        </a>
+                        <button onClick={reset} className="px-5 py-2.5 rounded-xl font-bold text-sm border border-white/20 text-white hover:bg-white/10 transition-all">↺ Try Another</button>
+                        <Link to="/ai-demo" className="px-5 py-2.5 rounded-xl font-bold text-sm bg-white/10 text-white hover:bg-white/20 transition-all">Full Demo →</Link>
+                      </div>
+                      <Link to="/signup?plan=accelerator" className="block text-blue-electric font-bold text-sm hover:underline mt-1">
+                        Want this on your website? Start Free Trial →
+                      </Link>
+                    </div>
+                  ) : (
+                    <div className="p-5 border-t border-white/10 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div><p className="text-white font-bold text-sm">Unlock HD — No Watermark</p><p className="text-gray-400 text-xs">Share with clients · Attach to estimates · Download</p></div>
+                        <button onClick={reset} className="text-xs text-gray-500 hover:text-gray-300">↺ Again</button>
+                      </div>
+                      <form onSubmit={handleCapture} className="flex flex-col sm:flex-row gap-2">
+                        <input required type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Your name"
+                          className="flex-1 px-3 py-2.5 bg-white/10 border border-white/10 rounded-xl text-white placeholder:text-gray-500 text-sm focus:outline-none focus:border-blue-electric" />
+                        <input required type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Work email"
+                          className="flex-1 px-3 py-2.5 bg-white/10 border border-white/10 rounded-xl text-white placeholder:text-gray-500 text-sm focus:outline-none focus:border-blue-electric" />
+                        <button type="submit" disabled={submitting}
+                          className="btn-shimmer px-5 py-2.5 rounded-xl font-bold text-sm whitespace-nowrap flex items-center gap-1.5 disabled:opacity-60">
+                          <Lock size={13} /> {submitting ? 'Unlocking...' : 'Unlock'}
+                        </button>
+                      </form>
+                    </div>
+                  )}
+                </motion.div>
+              ) : phase === 'generating' ? (
+                <motion.div key="gen" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  className="flex-1 flex flex-col items-center justify-center p-8 space-y-8">
+                  <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                    className="w-16 h-16 rounded-full border-4 border-blue-electric/20 border-t-blue-electric" />
+                  <div className="w-full max-w-sm space-y-2 font-mono text-sm">
+                    {DEMO_GEN_STEPS.slice(0, genStep).map((s, i) => (
+                      <motion.div key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
+                        className={s.startsWith('✓') ? 'text-green-400' : 'text-gray-400'}>
+                        {s.startsWith('✓') ? s : `> ${s}`}
+                      </motion.div>
+                    ))}
+                    {genStep < DEMO_GEN_STEPS.length && <div className="text-gray-600">&gt; <span className="animate-pulse">_</span></div>}
+                  </div>
+                  <div className="w-full max-w-sm space-y-1.5">
+                    <div className="flex justify-between text-xs text-gray-500 font-bold"><span>Processing</span><span>{genProgress}%</span></div>
+                    <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                      <motion.div animate={{ width: `${genProgress}%` }} transition={{ duration: 0.5 }}
+                        className="h-full bg-gradient-to-r from-blue-electric to-purple-500 rounded-full" />
+                    </div>
+                  </div>
+                  <p className="text-gray-500 text-sm text-center italic">AI image generation takes 15–45 seconds.<br />Preserving your room's exact layout...</p>
+                </motion.div>
+              ) : phase === 'error' ? (
+                <motion.div key="err" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4">
+                  <div className="text-5xl">⚠️</div>
+                  <h3 className="text-white font-bold text-lg">Generation Unavailable</h3>
+                  <p className="text-gray-400 text-sm max-w-xs">{errorMsg}</p>
+                  <div className="flex gap-3 flex-wrap justify-center">
+                    <button onClick={generate}
+                      className="btn-shimmer px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2">
+                      <RefreshCw size={14} /> Try Again
+                    </button>
+                    <Link to="/ai-demo"
+                      className="px-5 py-2.5 rounded-xl font-bold text-sm border border-white/20 text-white hover:bg-white/10 transition-all">
+                      Full Demo →
+                    </Link>
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex flex-col">
+                  <div className="flex-1 relative cursor-pointer group" onClick={generate}>
+                    <img src={beforeImg} alt="Before" className="absolute inset-0 w-full h-full object-cover group-hover:brightness-75 transition-all duration-300" referrerPolicy="no-referrer" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+                      <motion.div whileHover={{ scale: 1.1 }}
+                        className="w-20 h-20 bg-blue-electric rounded-2xl flex items-center justify-center shadow-2xl shadow-blue-electric/50">
+                        <Wand2 size={32} className="text-white" />
+                      </motion.div>
+                      <p className="text-white font-black text-2xl drop-shadow-lg">Generate AI Remodel</p>
+                      <p className="text-gray-300 text-sm">Select style on the left, then click here</p>
+                    </div>
+                    <div className="absolute top-4 left-4 bg-black/70 text-white text-xs font-bold px-3 py-1.5 rounded-lg uppercase tracking-widest">Current Room</div>
+                  </div>
+                  <div className="p-5 border-t border-white/10 flex flex-wrap justify-between items-center gap-3">
+                    <div><p className="text-white font-bold text-sm">Configure & Generate</p><p className="text-gray-400 text-xs">Select room, style & budget on the left</p></div>
+                    <div className="flex gap-4 text-xs text-gray-400">
+                      <span className="flex items-center gap-1"><Star size={11} className="text-yellow-400 fill-yellow-400" /> 4.9/5</span>
+                      <span>500+ contractors</span>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </motion.div>
+
+        {/* Bottom CTA row */}
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+          className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-5 bg-white/5 border border-white/10 rounded-2xl p-6">
+          <div>
+            <p className="text-white font-bold text-lg">Imagine showing this to every homeowner before they sign.</p>
+            <p className="text-gray-400 text-sm mt-1">Close more jobs by helping customers see the finished remodel before work begins.</p>
+          </div>
+          <div className="flex gap-3 shrink-0">
+            <Link to="/signup?plan=accelerator" className="btn-shimmer px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2">
+              Start Free Trial <ArrowRight size={16} />
+            </Link>
+            <Link to="/book-demo" className="border border-white/20 text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-white/10 transition-all">
+              Book Demo
+            </Link>
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+// ── OLD hero constants removed — replaced by HomeDemoSection above ─────────────
 const HERO_SAMPLES: Record<string, string> = {
   kitchen:  'https://picsum.photos/seed/kitchen-old-before/800/600',
   bathroom: 'https://picsum.photos/seed/bath-old-before/800/600',
@@ -373,7 +812,6 @@ function HeroAIGenerator() {
 }
 
 export default function Home() {
-  const [sliderValue, setSliderValue] = useState(50);
   const [showExitPopup, setShowExitPopup] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
@@ -397,118 +835,71 @@ export default function Home() {
       })}</script>
 
       {/* ── HERO ──────────────────────────────────────────────────────────── */}
-      <section className="relative min-h-screen flex items-center bg-navy overflow-hidden">
-        {/* Animated background blobs */}
+      <section className="relative bg-navy overflow-hidden py-20 md:py-28">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <motion.div animate={{ scale: [1, 1.2, 1], x: [0, 40, 0], y: [0, -30, 0] }}
-            transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
+          <motion.div animate={{ scale: [1, 1.2, 1], x: [0, 40, 0] }} transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
             className="absolute -top-40 -right-40 w-[600px] h-[600px] bg-blue-electric/20 rounded-full blur-3xl" />
-          <motion.div animate={{ scale: [1, 1.15, 1], x: [0, -30, 0], y: [0, 40, 0] }}
-            transition={{ duration: 15, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
+          <motion.div animate={{ scale: [1, 1.15, 1], x: [0, -30, 0] }} transition={{ duration: 15, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
             className="absolute -bottom-40 -left-40 w-[500px] h-[500px] bg-blue-electric/10 rounded-full blur-3xl" />
-          <motion.div animate={{ scale: [1, 1.3, 1] }}
-            transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-white/3 rounded-full blur-3xl" />
-          {/* Grid pattern */}
           <div className="absolute inset-0 bg-[linear-gradient(rgba(30,144,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(30,144,255,0.03)_1px,transparent_1px)] bg-[size:60px_60px]" />
         </div>
 
-        <div className="max-w-7xl mx-auto px-6 py-24 lg:py-32 grid lg:grid-cols-2 gap-16 items-center relative z-10">
-          <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.7 }} className="space-y-8">
-            {/* Badge */}
-            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-electric/20 border border-blue-electric/30 text-blue-electric text-sm font-bold">
-              <motion.span animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 1.5, repeat: Infinity }}>
-                <Zap size={14} fill="currentColor" />
-              </motion.span>
-              #1 Growth Platform for Remodelers
-            </motion.div>
-
-            <h1 className="text-5xl lg:text-6xl xl:text-7xl font-bold text-white leading-[1.05] tracking-tight">
-              Stop Losing{' '}
-              <span className="relative inline-block">
-                <span className="text-blue-electric">High-Profit</span>
-                <motion.span
-                  animate={{ scaleX: [0, 1] }} transition={{ duration: 0.6, delay: 0.8 }}
-                  className="absolute -bottom-2 left-0 right-0 h-1 bg-blue-electric/40 rounded-full origin-left block" />
-              </span>
-              {' '}Kitchen & Bathroom Remodels
-            </h1>
-
-            <p className="text-lg text-gray-300 leading-relaxed max-w-xl">
-              ClosePro isn't just software — it's your unfair advantage. A proven system to consistently close <strong className="text-white">3X more $10K–$50K jobs</strong>, command higher margins, and build predictable revenue without chasing referrals.
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Link to="/book-demo"
-                onClick={() => trackEvent('hero_cta_click')}
-                className="btn-shimmer group relative overflow-hidden px-8 py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 shadow-2xl shadow-blue-electric/40">
-                <motion.span animate={{ x: [0, 3, 0] }} transition={{ duration: 1.5, repeat: Infinity }}>
-                  👉
-                </motion.span>
-                Book My Free Demo
-                <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
-              </Link>
-              <Link to="/how-it-works"
-                className="border-2 border-white/20 text-white px-8 py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 hover:bg-white/10 hover:border-white/40 transition-all">
-                See How It Works
-              </Link>
-            </div>
-
-            {/* Trust row */}
-            <div className="flex flex-wrap gap-5 pt-2">
-              {[
-                { icon: '✅', text: 'No contracts required' },
-                { icon: '⚡', text: 'Live in 7 days' },
-                { icon: '🔒', text: 'Cancel anytime' }
-              ].map((t, i) => (
-                <span key={i} className="flex items-center gap-2 text-sm text-gray-400 font-medium">
-                  <span>{t.icon}</span> {t.text}
-                </span>
-              ))}
-            </div>
-
-            {/* Mini stats */}
-            <div className="grid grid-cols-3 gap-4 pt-4">
-              {[
-                { value: '500', suffix: '+', label: 'Active Clients' },
-                { value: '450', prefix: '$', suffix: 'M+', label: 'Revenue Generated' },
-                { value: '4.9', suffix: '/5', label: 'Average Rating' }
-              ].map((s, i) => (
-                <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 + i * 0.1 }}
-                  className="bg-white/5 border border-white/10 rounded-xl p-4 text-center backdrop-blur-sm">
-                  <p className="text-2xl font-black text-white">
-                    {s.prefix}<Counter to={parseFloat(s.value)} />{s.suffix}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1 font-medium">{s.label}</p>
-                </motion.div>
-              ))}
-            </div>
+        <div className="max-w-5xl mx-auto px-6 text-center relative z-10 space-y-8">
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-electric/20 border border-blue-electric/30 text-blue-electric text-sm font-bold">
+            <motion.span animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 1.5, repeat: Infinity }}>
+              <Zap size={14} fill="currentColor" />
+            </motion.span>
+            The #1 AI Remodel Visualization Tool for Contractors
           </motion.div>
 
-          {/* Hero right — live AI generator */}
-          <motion.div initial={{ opacity: 0, scale: 0.92, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 0.9, delay: 0.3 }} className="relative">
-            {/* Floating badges */}
-            <motion.div animate={{ y: [0, -8, 0] }} transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-              className="absolute -top-5 -left-4 z-20 bg-green-500 text-white px-3 py-1.5 rounded-xl shadow-2xl shadow-green-500/40 font-bold text-xs flex items-center gap-1.5">
-              <TrendingUp size={14} /> +34% Close Rate
-            </motion.div>
-            <motion.div animate={{ y: [0, 8, 0] }} transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
-              className="absolute -bottom-4 -right-2 z-20 bg-white text-navy px-3 py-1.5 rounded-xl shadow-2xl font-bold text-xs flex items-center gap-1.5">
-              <Zap size={14} className="text-blue-electric" fill="currentColor" /> New Lead — $28K Kitchen
-            </motion.div>
+          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.15 }}
+            className="text-5xl md:text-6xl xl:text-7xl font-black text-white leading-[1.05] tracking-tight">
+            Show Homeowners Their{' '}
+            <span className="text-blue-electric">Dream Remodel</span>{' '}
+            Before You Start
+          </motion.h1>
 
-            {/* Glow */}
-            <div className="absolute inset-0 bg-blue-electric/15 blur-3xl rounded-full scale-90 -z-10" />
+          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+            className="text-xl text-gray-300 leading-relaxed max-w-3xl mx-auto">
+            Upload any kitchen or bathroom photo. AI generates a photorealistic remodel concept in seconds.
+            Contractors using ClosePro close <strong className="text-white">3X more $10K–$50K jobs</strong> — on the first visit.
+          </motion.p>
 
-            <HeroAIGenerator />
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
+            className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <a href="#try-it"
+              onClick={() => trackEvent('hero_cta_click')}
+              className="btn-shimmer px-8 py-4 rounded-xl font-bold text-lg flex items-center gap-2 shadow-2xl shadow-blue-electric/40">
+              <Wand2 size={20} /> Try It Free Below ↓
+            </a>
+            <Link to="/book-demo"
+              className="border-2 border-white/20 text-white px-8 py-4 rounded-xl font-bold text-lg flex items-center gap-2 hover:bg-white/10 hover:border-white/40 transition-all">
+              Book My Demo
+            </Link>
+          </motion.div>
+
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
+            className="flex flex-wrap justify-center gap-8 pt-4">
+            {[
+              { value: '500', suffix: '+', label: 'Active Contractors' },
+              { prefix: '$', value: '450', suffix: 'M+', label: 'Revenue Generated' },
+              { value: '4.9', suffix: '/5', label: 'Avg Rating' }
+            ].map((s, i) => (
+              <div key={i} className="text-center">
+                <p className="text-3xl font-black text-white">{s.prefix}<Counter to={parseFloat(s.value)} />{s.suffix}</p>
+                <p className="text-xs text-gray-400 font-medium mt-1">{s.label}</p>
+              </div>
+            ))}
           </motion.div>
         </div>
       </section>
 
       {/* ── MARQUEE ──────────────────────────────────────────────────────────── */}
       <Marquee />
+
+      {/* ── AI DEMO — MAIN PRODUCT ───────────────────────────────────────────── */}
+      <HomeDemoSection />
 
       {/* ── STATS BANNER ─────────────────────────────────────────────────────── */}
       <section className="py-16 bg-white border-b border-gray-100">
@@ -602,69 +993,6 @@ export default function Home() {
             <FeatureCard icon={FileText}     title="Estimates & Invoices"  desc="Professional estimates that get approved faster and invoices that get paid on time."         result="Paid 2x faster"    color="from-teal-400 to-teal-600"      bg="bg-teal-50"   text="text-teal-600"      delay={0.32} />
             <FeatureCard icon={Users}        title="Demo Booking Tools"    desc="Let customers book consultations directly to your calendar while you sleep."                 result="More demos booked" color="from-pink-400 to-pink-600"      bg="bg-pink-50"   text="text-pink-600"      delay={0.4} />
           </div>
-        </div>
-      </section>
-
-      {/* ── AI VISUALIZER SPOTLIGHT ───────────────────────────────────────────── */}
-      <section className="section-padding bg-navy text-white overflow-hidden relative">
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(30,144,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(30,144,255,0.05)_1px,transparent_1px)] bg-[size:40px_40px]" />
-        <motion.div animate={{ scale: [1, 1.3, 1] }} transition={{ duration: 8, repeat: Infinity }}
-          className="absolute top-20 right-20 w-64 h-64 bg-blue-electric/10 rounded-full blur-3xl" />
-
-        <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-20 items-center relative z-10">
-          <div className="space-y-8">
-            <motion.div initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}>
-              <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-blue-electric/20 border border-blue-electric/30 text-blue-electric rounded-full text-sm font-bold mb-6">
-                <Zap size={14} fill="currentColor" /> THE GAME CHANGER
-              </span>
-              <h2 className="text-4xl md:text-6xl font-bold leading-tight mb-6">
-                Show Them Their Dream Home <span className="text-blue-electric">Before</span> They Sign
-              </h2>
-              <p className="text-gray-300 text-xl leading-relaxed mb-8">
-                The biggest hurdle in remodeling is the "Visualization Gap." Our AI tool instantly generates a stunning remodel visualization from a photo of the client's current space.
-              </p>
-              <ul className="space-y-4 mb-10">
-                {['Reduce sales friction and hesitation instantly', 'Build confidence in high-ticket $30K+ projects', 'Stand out from every other contractor in your market', 'Close deals on the first or second visit consistently'].map((item, i) => (
-                  <motion.li key={i} initial={{ opacity: 0, x: -10 }} whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true }} transition={{ delay: i * 0.1 }}
-                    className="flex items-center gap-3 text-gray-200">
-                    <span className="w-6 h-6 bg-blue-electric rounded-full flex items-center justify-center flex-shrink-0">
-                      <CheckCircle2 size={14} className="text-white" />
-                    </span>
-                    {item}
-                  </motion.li>
-                ))}
-              </ul>
-              <Link to="/book-demo" className="inline-flex items-center gap-2 bg-blue-electric text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-blue-electric/90 hover:scale-105 transition-all shadow-xl shadow-blue-electric/30">
-                👉 See It Live <ChevronRight size={20} />
-              </Link>
-            </motion.div>
-          </div>
-
-          <motion.div initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }}
-            className="relative">
-            <div className="rounded-3xl overflow-hidden border-4 border-white/10 shadow-2xl bg-white/5 p-1">
-              <div className="relative aspect-square overflow-hidden rounded-2xl">
-                <img src="https://picsum.photos/seed/kitchen-before/800/800" alt="Before"
-                  className="absolute inset-0 w-full h-full object-cover" referrerPolicy="no-referrer" />
-                <div className="absolute inset-0 w-full h-full overflow-hidden" style={{ clipPath: `inset(0 0 0 ${sliderValue}%)` }}>
-                  <img src="https://picsum.photos/seed/kitchen-after/800/800" alt="After"
-                    className="absolute inset-0 w-full h-full object-cover" referrerPolicy="no-referrer" />
-                </div>
-                <div className="absolute inset-y-0 w-0.5 bg-white shadow-xl z-20" style={{ left: `${sliderValue}%` }}>
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-white rounded-full shadow-2xl flex items-center justify-center border-4 border-blue-electric">
-                    <div className="flex gap-1"><div className="w-1 h-5 bg-blue-electric rounded-full" /><div className="w-1 h-5 bg-blue-electric rounded-full" /></div>
-                  </div>
-                </div>
-                <div className="absolute top-4 left-4 bg-black/70 backdrop-blur px-3 py-1.5 rounded-lg text-xs font-bold text-white uppercase tracking-widest">Before</div>
-                <div className="absolute top-4 right-4 bg-blue-electric/90 backdrop-blur px-3 py-1.5 rounded-lg text-xs font-bold text-white uppercase tracking-widest">After (AI)</div>
-                <input type="range" min="0" max="100" value={sliderValue}
-                  onChange={(e) => setSliderValue(parseInt(e.target.value))}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-ew-resize z-30" />
-              </div>
-            </div>
-            <p className="text-center text-gray-400 mt-4 text-sm italic">← Drag to see the AI transformation</p>
-          </motion.div>
         </div>
       </section>
 
