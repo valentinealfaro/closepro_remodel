@@ -23,7 +23,8 @@ import {
   CreditCard,
   Building2,
   Save,
-  ChevronRight
+  ChevronRight,
+  Bot
 } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
@@ -39,6 +40,7 @@ import InvoiceManager from '../components/InvoiceManager';
 import ProjectManager from '../components/ProjectManager';
 import AdsManager from '../components/AdsManager';
 import AdminPanel from '../components/AdminPanel';
+import AgentsPanel from '../components/AgentsPanel';
 
 // ─── Account Settings Page ─────────────────────────────────────────────────
 
@@ -570,6 +572,7 @@ export default function Dashboard() {
         { to: '/app/projects', icon: BriefcaseIcon, label: 'Projects' },
         { to: '/app/marketing', icon: Megaphone, label: 'Marketing' },
         { to: '/app/visualizer', icon: ImageIcon, label: 'AI Visualizer' },
+        { to: '/app/agents', icon: Bot, label: 'AI Agents' },
         { to: '/app/website', icon: Globe, label: 'Website' },
         { to: '/app/automation', icon: Zap, label: 'Automation' },
         { to: '/app/settings', icon: Settings, label: 'Settings' },
@@ -754,6 +757,7 @@ export default function Dashboard() {
             <Route path="/projects" element={<ProjectManager />} />
             <Route path="/marketing" element={<AdsManager />} />
             <Route path="/visualizer" element={<AIVisualizer />} />
+            <Route path="/agents" element={<AgentsPanel />} />
             <Route path="/website" element={<WebsiteEditor />} />
             <Route path="/automation" element={<AutomationEngine />} />
             <Route path="/settings" element={
