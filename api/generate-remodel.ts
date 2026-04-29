@@ -151,60 +151,64 @@ export default async function handler(req: any, res: any) {
       ? buildBathroomPrompt(style, budget, materials, mode, notes)
       : buildKitchenPrompt(style, budget, materials, mode, notes);
 
-  const MODELS_TO_TRY = [
-    "gemini-2.0-flash-exp",
-    "gemini-2.0-flash",
-    "gemini-2.0-flash-preview-image-generation",
-  ];
-
   const ai = new GoogleGenAI({ apiKey: GEMINI_KEY });
 
-  for (const model of MODELS_TO_TRY) {
+  // ── Step 1: Try Gemini img2img models ──────────────────────────────────────
+  const IMG2IMG_MODELS = ["gemini-2.0-flash-exp", "gemini-2.0-flash", "gemini-2.0-flash-preview-image-generation"];
+
+  for (const model of IMG2IMG_MODELS) {
     try {
       const response = await ai.models.generateContent({
         model,
-        contents: [
-          {
-            role: "user",
-            parts: [
-              { inlineData: { mimeType, data: imageBase64 } },
-              { text: prompt },
-            ],
-          },
-        ],
+        contents: [{ role: "user", parts: [{ inlineData: { mimeType, data: imageBase64 } }, { text: prompt }] }],
         config: { responseModalities: ["IMAGE", "TEXT"] } as any,
       });
-
       const parts: any[] = response.candidates?.[0]?.content?.parts || [];
       const imgPart = parts.find((p: any) => p.inlineData?.data);
-
       if (imgPart?.inlineData) {
-        return res.status(200).json({
-          success: true,
-          imageData: imgPart.inlineData.data,
-          mimeType: imgPart.inlineData.mimeType || "image/jpeg",
-          model,
-        });
+        return res.status(200).json({ success: true, imageData: imgPart.inlineData.data, mimeType: imgPart.inlineData.mimeType || "image/jpeg", model });
       }
-
       console.warn(`${model} returned no image, trying next`);
     } catch (err: any) {
-      const isNotFound =
-        err.message?.includes("not found") ||
-        err.message?.includes("404") ||
-        err.message?.includes("INVALID_ARGUMENT");
-      if (isNotFound) {
-        console.warn(`${model} unavailable, trying next`);
-        continue;
-      }
-      console.error("Remodel generation error:", err.message);
+      const skip = err.message?.includes("not found") || err.message?.includes("404") || err.message?.includes("INVALID_ARGUMENT") || err.message?.includes("is not supported") || err.message?.includes("does not support");
+      if (skip) { console.warn(`${model} unavailable, trying next`); continue; }
+      console.error("img2img error:", err.message);
       return res.status(500).json({ error: err.message || "Generation failed" });
     }
   }
 
+  // ── Step 2: Fallback — vision analysis + Imagen 3 ──────────────────────────
+  console.log("img2img unavailable, falling back to Imagen 3...");
+  try {
+    // Analyze the uploaded room photo with Gemini vision
+    const analysisRes = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [{ role: "user", parts: [
+        { inlineData: { mimeType, data: imageBase64 } },
+        { text: `Describe this ${roomType} in precise detail for an AI image generator: room shape, camera angle/perspective, window and door positions, ceiling height, current materials, colors, lighting, and all visible fixtures. Be specific. 3-5 sentences.` }
+      ]}],
+    });
+    const roomDesc = analysisRes.text?.trim() || `a ${roomType} with standard layout`;
+
+    const imagenPrompt = `Photorealistic interior design rendering of a remodeled ${roomType}.\n\nRoom context: ${roomDesc}\n\n${prompt}\n\nStyle: Professional interior photography, realistic lighting, high detail, clean finish.`;
+
+    const imgRes = await (ai.models as any).generateImages({
+      model: "imagen-3.0-generate-001",
+      prompt: imagenPrompt,
+      config: { numberOfImages: 1, outputMimeType: "image/jpeg", aspectRatio: "4:3" },
+    });
+
+    const imageBytes = imgRes?.generatedImages?.[0]?.image?.imageBytes;
+    if (imageBytes) {
+      return res.status(200).json({ success: true, imageData: imageBytes, mimeType: "image/jpeg", model: "imagen-3.0-generate-001" });
+    }
+    console.warn("Imagen 3 returned no image bytes");
+  } catch (err: any) {
+    console.error("Imagen 3 fallback error:", err.message);
+  }
+
   return res.status(422).json({
     error: "Image generation unavailable",
-    message:
-      "The AI image generation model is not available on this account. Try again later.",
+    message: "Image generation is not enabled for this API key. Visit aistudio.google.com and ensure your key has access to Imagen 3.",
   });
 }
