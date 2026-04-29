@@ -1,5 +1,5 @@
 import { motion, AnimatePresence, useInView } from 'motion/react';
-import { ChevronRight, Star, CheckCircle2, ArrowRight, Zap, BarChart3, Users, Layout as LayoutIcon, MessageSquare, FileText, X, ArrowUpRight, TrendingUp, Shield, Clock } from 'lucide-react';
+import { ChevronRight, Star, CheckCircle2, ArrowRight, Zap, BarChart3, Users, Layout as LayoutIcon, MessageSquare, FileText, X, ArrowUpRight, TrendingUp, Shield, Clock, Wand2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import { trackEvent } from '../lib/tracking';
@@ -95,6 +95,222 @@ function Marquee() {
           <span key={i} className="text-white font-bold text-sm tracking-wide">{item}</span>
         ))}
       </motion.div>
+    </div>
+  );
+}
+
+// ── Hero AI Generator ─────────────────────────────────────────────────────────
+
+const HERO_SAMPLES: Record<string, string> = {
+  kitchen:  'https://picsum.photos/seed/kitchen-old-before/800/600',
+  bathroom: 'https://picsum.photos/seed/bath-old-before/800/600',
+  living:   'https://picsum.photos/seed/living-old-before/800/600',
+  exterior: 'https://picsum.photos/seed/ext-old-before/800/600',
+};
+
+const HERO_RESULTS: Record<string, Record<string, string>> = {
+  kitchen:  { farmhouse: 'https://picsum.photos/seed/kitchen-mf-result/800/600', contemporary: 'https://picsum.photos/seed/kitchen-lc-result/800/600', transitional: 'https://picsum.photos/seed/kitchen-tr-result/800/600', budget: 'https://picsum.photos/seed/kitchen-bm-result/800/600', european: 'https://picsum.photos/seed/kitchen-eu-result/800/600' },
+  bathroom: { farmhouse: 'https://picsum.photos/seed/bath-mf-result/800/600', contemporary: 'https://picsum.photos/seed/bath-lc-result/800/600', transitional: 'https://picsum.photos/seed/bath-tr-result/800/600', budget: 'https://picsum.photos/seed/bath-bm-result/800/600', european: 'https://picsum.photos/seed/bath-eu-result/800/600' },
+  living:   { farmhouse: 'https://picsum.photos/seed/living-mf/800/600', contemporary: 'https://picsum.photos/seed/living-lc/800/600', transitional: 'https://picsum.photos/seed/living-tr/800/600', budget: 'https://picsum.photos/seed/living-bm/800/600', european: 'https://picsum.photos/seed/living-eu/800/600' },
+  exterior: { farmhouse: 'https://picsum.photos/seed/ext-mf/800/600', contemporary: 'https://picsum.photos/seed/ext-lc/800/600', transitional: 'https://picsum.photos/seed/ext-tr/800/600', budget: 'https://picsum.photos/seed/ext-bm/800/600', european: 'https://picsum.photos/seed/ext-eu/800/600' },
+};
+
+const HERO_ROOMS = [
+  { id: 'kitchen',  label: 'Kitchen',  emoji: '🍳' },
+  { id: 'bathroom', label: 'Bath',     emoji: '🛁' },
+  { id: 'living',   label: 'Living',   emoji: '🛋️' },
+  { id: 'exterior', label: 'Exterior', emoji: '🏠' },
+];
+
+const HERO_STYLES = [
+  { id: 'farmhouse',    label: 'Modern Farmhouse' },
+  { id: 'contemporary', label: 'Luxury Contemporary' },
+  { id: 'transitional', label: 'Transitional' },
+  { id: 'budget',       label: 'Budget-Friendly' },
+  { id: 'european',     label: 'High-End European' },
+];
+
+const HERO_GEN_STEPS = [
+  'Analyzing space dimensions...',
+  'Applying style parameters...',
+  'Rendering material selections...',
+  '✓ Visualization complete!',
+];
+
+function HeroBeforeAfter({ before, after }: { before: string; after: string }) {
+  const [pos, setPos] = useState(50);
+  return (
+    <div className="relative w-full aspect-[4/3] rounded-xl overflow-hidden select-none">
+      <img src={before} alt="Before" className="absolute inset-0 w-full h-full object-cover" referrerPolicy="no-referrer" />
+      <div className="absolute inset-0 overflow-hidden" style={{ clipPath: `inset(0 0 0 ${pos}%)` }}>
+        <img src={after} alt="After" className="absolute inset-0 w-full h-full object-cover" referrerPolicy="no-referrer" />
+        <div className="absolute top-2 right-2 bg-blue-electric text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-lg">AI Result</div>
+        <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-25">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="absolute text-white font-bold text-xs whitespace-nowrap"
+              style={{ transform: 'rotate(-30deg)', top: `${i * 30 - 5}%`, left: '-10%', right: '-10%', textAlign: 'center', letterSpacing: '0.3em' }}>
+              CLOSEPRO DEMO &nbsp;&nbsp;&nbsp; CLOSEPRO DEMO &nbsp;&nbsp;&nbsp; CLOSEPRO DEMO
+            </div>
+          ))}
+        </div>
+      </div>
+      {/* Slider handle */}
+      <div className="absolute inset-y-0 z-20 cursor-ew-resize" style={{ left: `${pos}%` }}>
+        <div className="absolute inset-y-0 w-0.5 bg-white shadow-lg" />
+        <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-8 h-8 bg-white rounded-full shadow-xl flex items-center justify-center border-2 border-blue-electric">
+          <div className="flex gap-0.5">
+            <div className="w-0.5 h-3 bg-blue-electric rounded-full" />
+            <div className="w-0.5 h-3 bg-blue-electric rounded-full" />
+          </div>
+        </div>
+      </div>
+      <div className="absolute top-2 left-2 bg-black/60 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-widest">Before</div>
+      <input type="range" min="0" max="100" value={pos} onChange={e => setPos(Number(e.target.value))}
+        className="absolute inset-0 w-full h-full opacity-0 cursor-ew-resize z-30" />
+    </div>
+  );
+}
+
+function HeroAIGenerator() {
+  const [room, setRoom] = useState('kitchen');
+  const [style, setStyle] = useState('farmhouse');
+  const [phase, setPhase] = useState<'idle' | 'generating' | 'done'>('idle');
+  const [genStep, setGenStep] = useState(0);
+
+  const beforeImg = HERO_SAMPLES[room];
+  const afterImg = HERO_RESULTS[room]?.[style] || HERO_RESULTS.kitchen.farmhouse;
+
+  const generate = () => {
+    if (phase === 'generating') return;
+    setPhase('generating');
+    setGenStep(0);
+    HERO_GEN_STEPS.forEach((_, i) => {
+      setTimeout(() => {
+        setGenStep(i + 1);
+        if (i === HERO_GEN_STEPS.length - 1) setTimeout(() => setPhase('done'), 400);
+      }, i * 550);
+    });
+  };
+
+  const reset = () => { setPhase('idle'); };
+
+  return (
+    <div className="bg-white rounded-3xl shadow-2xl overflow-hidden w-full">
+      {/* Terminal header */}
+      <div className="bg-[#0d1117] px-4 pt-4 pb-3 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="flex gap-1.5">
+              <div className="w-3 h-3 rounded-full bg-red-500" />
+              <div className="w-3 h-3 rounded-full bg-yellow-400" />
+              <div className="w-3 h-3 rounded-full bg-green-500" />
+            </div>
+            <span className="text-gray-500 text-xs font-mono ml-1">closepro-ai — remodel visualizer</span>
+          </div>
+          <motion.span
+            animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 1.5, repeat: Infinity }}
+            className="text-[10px] font-black bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse inline-block" /> LIVE
+          </motion.span>
+        </div>
+        {/* Room tabs */}
+        <div className="grid grid-cols-4 gap-1.5">
+          {HERO_ROOMS.map(r => (
+            <button key={r.id} onClick={() => { setRoom(r.id); reset(); }}
+              className={`text-xs py-2 rounded-lg font-bold transition-all ${
+                room === r.id
+                  ? 'bg-blue-electric text-white shadow-lg shadow-blue-electric/30'
+                  : 'text-gray-500 hover:text-white hover:bg-white/10'
+              }`}>
+              {r.emoji} {r.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="p-4 space-y-3 bg-gray-50">
+        {/* Image area */}
+        <AnimatePresence mode="wait">
+          {phase === 'done' ? (
+            <motion.div key="result" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-1">
+              <HeroBeforeAfter before={beforeImg} after={afterImg} />
+              <p className="text-center text-[11px] text-gray-400 italic">← drag slider to compare</p>
+            </motion.div>
+          ) : phase === 'generating' ? (
+            <motion.div key="generating" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              className="aspect-[4/3] rounded-xl bg-[#0d1117] flex flex-col items-center justify-center space-y-4 p-5">
+              <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}
+                className="w-10 h-10 rounded-full border-4 border-blue-electric/20 border-t-blue-electric" />
+              <div className="w-full space-y-2 font-mono text-xs">
+                {HERO_GEN_STEPS.slice(0, genStep).map((s, i) => (
+                  <motion.div key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
+                    className={s.startsWith('✓') ? 'text-green-400' : 'text-gray-400'}>
+                    {s.startsWith('✓') ? s : `> ${s}`}
+                  </motion.div>
+                ))}
+                {genStep < HERO_GEN_STEPS.length && (
+                  <div className="text-gray-600">&gt; <span className="animate-pulse">_</span></div>
+                )}
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              className="relative aspect-[4/3] rounded-xl overflow-hidden group cursor-pointer" onClick={generate}>
+              <img src={beforeImg} alt="Room" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" referrerPolicy="no-referrer" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="bg-blue-electric/90 backdrop-blur text-white px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 shadow-xl opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0">
+                  <Wand2 size={16} /> Click to Generate
+                </div>
+              </div>
+              <div className="absolute bottom-3 left-3 bg-black/60 text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest">Before — Click Generate</div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Style picker */}
+        <div className="grid grid-cols-5 gap-1">
+          {HERO_STYLES.map(s => (
+            <button key={s.id} onClick={() => { setStyle(s.id); reset(); }}
+              className={`text-[10px] py-1.5 px-0.5 rounded-lg font-bold transition-all leading-tight text-center ${
+                style === s.id
+                  ? 'bg-blue-electric text-white shadow-md'
+                  : 'bg-white text-gray-500 hover:bg-gray-100 border border-gray-200'
+              }`}>
+              {s.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Action button */}
+        {phase === 'done' ? (
+          <div className="grid grid-cols-2 gap-2">
+            <button onClick={reset}
+              className="py-3 rounded-xl font-bold text-sm border-2 border-gray-200 text-gray-600 hover:border-blue-electric hover:text-blue-electric transition-all flex items-center justify-center gap-1.5">
+              ↺ Try Again
+            </button>
+            <Link to="/ai-demo"
+              className="btn-shimmer py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-1.5">
+              Full Demo <ArrowRight size={15} />
+            </Link>
+          </div>
+        ) : (
+          <motion.button
+            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+            onClick={generate} disabled={phase === 'generating'}
+            className="btn-shimmer w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-60">
+            <Wand2 size={16} />
+            {phase === 'generating' ? 'Generating your remodel...' : 'Generate My Remodel →'}
+          </motion.button>
+        )}
+
+        {/* Trust row */}
+        <div className="flex items-center justify-center gap-4 text-[10px] text-gray-400 font-medium pt-0.5">
+          <span>✓ No signup needed</span>
+          <span>✓ Results in seconds</span>
+          <span>✓ Free demo</span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -213,30 +429,23 @@ export default function Home() {
             </div>
           </motion.div>
 
-          {/* Hero right — dashboard preview */}
-          <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+          {/* Hero right — live AI generator */}
+          <motion.div initial={{ opacity: 0, scale: 0.92, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ duration: 0.9, delay: 0.3 }} className="relative">
             {/* Floating badges */}
             <motion.div animate={{ y: [0, -8, 0] }} transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-              className="absolute -top-6 -left-6 z-20 bg-green-500 text-white px-4 py-2 rounded-xl shadow-2xl shadow-green-500/40 font-bold text-sm flex items-center gap-2">
-              <TrendingUp size={16} /> +34% Close Rate
+              className="absolute -top-5 -left-4 z-20 bg-green-500 text-white px-3 py-1.5 rounded-xl shadow-2xl shadow-green-500/40 font-bold text-xs flex items-center gap-1.5">
+              <TrendingUp size={14} /> +34% Close Rate
             </motion.div>
             <motion.div animate={{ y: [0, 8, 0] }} transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
-              className="absolute -bottom-4 -right-4 z-20 bg-white text-navy px-4 py-2 rounded-xl shadow-2xl font-bold text-sm flex items-center gap-2">
-              <Zap size={16} className="text-blue-electric" fill="currentColor" /> New Lead — $28K Kitchen
-            </motion.div>
-            <motion.div animate={{ y: [0, -6, 0] }} transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
-              className="absolute top-1/2 -right-8 z-20 bg-blue-electric text-white px-3 py-2 rounded-xl shadow-xl font-bold text-xs">
-              🤖 AI Sent Follow-up
+              className="absolute -bottom-4 -right-2 z-20 bg-white text-navy px-3 py-1.5 rounded-xl shadow-2xl font-bold text-xs flex items-center gap-1.5">
+              <Zap size={14} className="text-blue-electric" fill="currentColor" /> New Lead — $28K Kitchen
             </motion.div>
 
-            <div className="relative bg-white/5 border border-white/10 rounded-3xl overflow-hidden shadow-2xl backdrop-blur-sm p-2">
-              <img src="https://picsum.photos/seed/remodel-dashboard/900/700" alt="ClosePro Dashboard"
-                className="w-full rounded-2xl" referrerPolicy="no-referrer" />
-              <div className="absolute inset-0 bg-gradient-to-t from-navy/60 via-transparent to-transparent rounded-3xl pointer-events-none" />
-            </div>
             {/* Glow */}
-            <div className="absolute inset-0 bg-blue-electric/10 blur-3xl rounded-full scale-75 -z-10" />
+            <div className="absolute inset-0 bg-blue-electric/15 blur-3xl rounded-full scale-90 -z-10" />
+
+            <HeroAIGenerator />
           </motion.div>
         </div>
       </section>
