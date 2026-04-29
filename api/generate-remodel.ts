@@ -213,8 +213,22 @@ export default async function handler(req: any, res: any) {
     console.warn("Imagen 3 failed:", err.message);
   }
 
+  // ── Step 4: Pollinations.ai — always works, no API key needed ──────────────
+  console.log("All Google models failed, falling back to Pollinations.ai...");
+  try {
+    const clean = combinedPrompt.replace(/\n+/g, " ").replace(/[^\w\s,.:;!?()'"-]/g, "").slice(0, 450);
+    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(clean)}?width=1024&height=768&nologo=true&model=flux&enhance=true&seed=${Date.now()}`;
+    const r = await fetch(url, { signal: AbortSignal.timeout(50000) });
+    if (r.ok) {
+      const buf = await r.arrayBuffer();
+      return res.status(200).json({ success: true, imageData: Buffer.from(buf).toString("base64"), mimeType: r.headers.get("content-type") || "image/jpeg", model: "pollinations-flux" });
+    }
+  } catch (err: any) {
+    console.error("Pollinations failed:", err.message);
+  }
+
   return res.status(422).json({
     error: "Image generation unavailable",
-    message: "Generation failed. Your API key may still be activating — try again in a few minutes.",
+    message: "Generation failed. Please try again.",
   });
 }
