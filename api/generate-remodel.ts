@@ -155,7 +155,7 @@ export default async function handler(req: any, res: any) {
   const ai = new GoogleGenAI({ apiKey: GEMINI_KEY });
 
   // ── Step 1: Try Gemini img2img models ──────────────────────────────────────
-  const IMG2IMG_MODELS = ["gemini-2.0-flash-exp", "gemini-2.0-flash", "gemini-2.0-flash-preview-image-generation"];
+  const IMG2IMG_MODELS = ["gemini-2.0-flash-exp", "gemini-2.0-flash", "gemini-2.0-flash-preview-image-generation", "gemini-2.0-flash-exp-image-generation"];
 
   for (const model of IMG2IMG_MODELS) {
     try {

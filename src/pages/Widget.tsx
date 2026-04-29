@@ -69,11 +69,11 @@ function BeforeAfterSlider({ before, after, watermark }: { before: string; after
         <img src={after} alt="After" className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute top-3 right-3 bg-blue-electric text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-lg">AI Result</div>
         {watermark && (
-          <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-30">
+          <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-20">
             {Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="absolute text-white font-bold text-sm whitespace-nowrap"
                 style={{ transform: 'rotate(-30deg)', top: `${i * 22 - 5}%`, left: '-10%', right: '-10%', textAlign: 'center', letterSpacing: '0.3em' }}>
-                CLOSEPRO DEMO &nbsp;&nbsp;&nbsp; CLOSEPRO DEMO &nbsp;&nbsp;&nbsp; CLOSEPRO DEMO
+                ENTER INFO TO UNLOCK &nbsp;&nbsp;&nbsp; ENTER INFO TO UNLOCK &nbsp;&nbsp;&nbsp; ENTER INFO TO UNLOCK
               </div>
             ))}
           </div>
@@ -401,20 +401,16 @@ export default function Widget() {
 
                   <BeforeAfterSlider before={previewUrl!} after={resultSrc!} watermark />
 
-                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
-                    <p className="text-amber-700 text-sm font-bold">Demo watermark applied — enter your info below to unlock the HD version free</p>
-                  </div>
-
                   {/* Lead capture */}
                   <div className="bg-white border border-gray-100 shadow-xl rounded-2xl p-6 space-y-4">
                     <div>
-                      <h3 className="font-black text-navy text-lg">Unlock Your Free HD Result</h3>
-                      <p className="text-gray-500 text-sm">No watermark · Download · Share with your contractor</p>
+                      <h3 className="font-black text-navy text-lg">Get Your Free HD Result</h3>
+                      <p className="text-gray-500 text-sm">Enter your info and we'll send your high-resolution remodel — no watermark, free.</p>
                     </div>
                     <div className="flex gap-3 text-sm text-gray-600">
                       <span>📥 HD download</span>
-                      <span>🔗 Share link</span>
-                      <span>💼 Use in estimates</span>
+                      <span>📞 Contractor follow-up</span>
+                      <span>💼 Free quote</span>
                     </div>
                     <form onSubmit={handleCapture} className="space-y-3">
                       <div className="grid grid-cols-2 gap-3">
@@ -442,8 +438,8 @@ export default function Widget() {
             <motion.div key="done" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="max-w-2xl mx-auto space-y-6 text-center">
               <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', bounce: 0.6 }}
                 className="text-5xl">🎉</motion.div>
-              <h2 className="text-2xl font-black text-navy">Unlocked, {name}!</h2>
-              <p className="text-gray-500">Your HD remodel visualization is ready. A contractor will be in touch soon.</p>
+              <h2 className="text-2xl font-black text-navy">Here's your result, {name}!</h2>
+              <p className="text-gray-500">Your remodel visualization is ready. A contractor will be in touch soon about your free quote.</p>
 
               <BeforeAfterSlider before={previewUrl!} after={resultSrc!} watermark={false} />
 
