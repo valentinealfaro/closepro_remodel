@@ -174,25 +174,81 @@ function HeroBeforeAfter({ before, after }: { before: string; after: string }) {
 function HeroAIGenerator() {
   const [room, setRoom] = useState('kitchen');
   const [style, setStyle] = useState('farmhouse');
-  const [phase, setPhase] = useState<'idle' | 'generating' | 'done'>('idle');
+  const [phase, setPhase] = useState<'idle' | 'loading' | 'generating' | 'done' | 'error'>('idle');
   const [genStep, setGenStep] = useState(0);
+  const [resultSrc, setResultSrc] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState('');
 
   const beforeImg = HERO_SAMPLES[room];
-  const afterImg = HERO_RESULTS[room]?.[style] || HERO_RESULTS.kitchen.farmhouse;
+  const afterImg = resultSrc;
 
-  const generate = () => {
-    if (phase === 'generating') return;
-    setPhase('generating');
-    setGenStep(0);
-    HERO_GEN_STEPS.forEach((_, i) => {
-      setTimeout(() => {
-        setGenStep(i + 1);
-        if (i === HERO_GEN_STEPS.length - 1) setTimeout(() => setPhase('done'), 400);
-      }, i * 550);
+  const fetchAsBase64 = async (url: string): Promise<{ data: string; mimeType: string }> => {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result as string;
+        const [prefix, data] = dataUrl.split(',');
+        const mimeType = prefix.match(/:(.*?);/)?.[1] || 'image/jpeg';
+        resolve({ data, mimeType });
+      };
+      reader.readAsDataURL(blob);
     });
   };
 
-  const reset = () => { setPhase('idle'); };
+  const generate = async () => {
+    if (phase === 'loading' || phase === 'generating') return;
+    setResultSrc(null);
+    setErrorMsg('');
+    setPhase('loading');
+    setGenStep(0);
+
+    // Start visual steps
+    setPhase('generating');
+    const interval = setInterval(() => {
+      setGenStep(prev => Math.min(prev + 1, HERO_GEN_STEPS.length - 2));
+    }, 700);
+
+    try {
+      const { data: imageBase64, mimeType } = await fetchAsBase64(beforeImg);
+      const res = await fetch('/api/generate-remodel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageBase64, mimeType, roomType: room, style,
+          budget: 'highend', mode: 'realistic',
+          notes: 'High-quality remodel preview for contractor sales presentation.',
+        }),
+      });
+
+      clearInterval(interval);
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setErrorMsg(err.message || err.error || 'Generation failed. Try the full demo.');
+        setPhase('error');
+        return;
+      }
+
+      const data = await res.json();
+      if (!data.imageData) {
+        setErrorMsg('No image generated. Try the full demo to upload your own photo.');
+        setPhase('error');
+        return;
+      }
+
+      setGenStep(HERO_GEN_STEPS.length);
+      setResultSrc(`data:${data.mimeType || 'image/jpeg'};base64,${data.imageData}`);
+      setPhase('done');
+    } catch (err: any) {
+      clearInterval(interval);
+      setErrorMsg('Server not running. Start with: npm run dev');
+      setPhase('error');
+    }
+  };
+
+  const reset = () => { setPhase('idle'); setResultSrc(null); setErrorMsg(''); setGenStep(0); };
 
   return (
     <div className="bg-white rounded-3xl shadow-2xl overflow-hidden w-full">
@@ -218,9 +274,7 @@ function HeroAIGenerator() {
           {HERO_ROOMS.map(r => (
             <button key={r.id} onClick={() => { setRoom(r.id); reset(); }}
               className={`text-xs py-2 rounded-lg font-bold transition-all ${
-                room === r.id
-                  ? 'bg-blue-electric text-white shadow-lg shadow-blue-electric/30'
-                  : 'text-gray-500 hover:text-white hover:bg-white/10'
+                room === r.id ? 'bg-blue-electric text-white shadow-lg shadow-blue-electric/30' : 'text-gray-500 hover:text-white hover:bg-white/10'
               }`}>
               {r.emoji} {r.label}
             </button>
@@ -231,12 +285,12 @@ function HeroAIGenerator() {
       <div className="p-4 space-y-3 bg-gray-50">
         {/* Image area */}
         <AnimatePresence mode="wait">
-          {phase === 'done' ? (
+          {phase === 'done' && afterImg ? (
             <motion.div key="result" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-1">
               <HeroBeforeAfter before={beforeImg} after={afterImg} />
               <p className="text-center text-[11px] text-gray-400 italic">← drag slider to compare</p>
             </motion.div>
-          ) : phase === 'generating' ? (
+          ) : phase === 'generating' || phase === 'loading' ? (
             <motion.div key="generating" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               className="aspect-[4/3] rounded-xl bg-[#0d1117] flex flex-col items-center justify-center space-y-4 p-5">
               <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}
@@ -248,10 +302,17 @@ function HeroAIGenerator() {
                     {s.startsWith('✓') ? s : `> ${s}`}
                   </motion.div>
                 ))}
-                {genStep < HERO_GEN_STEPS.length && (
-                  <div className="text-gray-600">&gt; <span className="animate-pulse">_</span></div>
-                )}
+                {genStep < HERO_GEN_STEPS.length && <div className="text-gray-600">&gt; <span className="animate-pulse">_</span></div>}
               </div>
+              <p className="text-gray-600 text-[10px] italic">This may take 15–30 seconds...</p>
+            </motion.div>
+          ) : phase === 'error' ? (
+            <motion.div key="error" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              className="aspect-[4/3] rounded-xl bg-gray-100 flex flex-col items-center justify-center space-y-3 p-5 text-center">
+              <p className="text-2xl">⚠️</p>
+              <p className="text-sm font-bold text-gray-700">Generation unavailable</p>
+              <p className="text-xs text-gray-500">{errorMsg}</p>
+              <Link to="/ai-demo" className="text-xs font-bold text-blue-electric hover:underline">Try the full demo →</Link>
             </motion.div>
           ) : (
             <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
@@ -273,9 +334,7 @@ function HeroAIGenerator() {
           {HERO_STYLES.map(s => (
             <button key={s.id} onClick={() => { setStyle(s.id); reset(); }}
               className={`text-[10px] py-1.5 px-0.5 rounded-lg font-bold transition-all leading-tight text-center ${
-                style === s.id
-                  ? 'bg-blue-electric text-white shadow-md'
-                  : 'bg-white text-gray-500 hover:bg-gray-100 border border-gray-200'
+                style === s.id ? 'bg-blue-electric text-white shadow-md' : 'bg-white text-gray-500 hover:bg-gray-100 border border-gray-200'
               }`}>
               {s.label}
             </button>
@@ -295,19 +354,17 @@ function HeroAIGenerator() {
             </Link>
           </div>
         ) : (
-          <motion.button
-            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-            onClick={generate} disabled={phase === 'generating'}
+          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+            onClick={generate} disabled={phase === 'generating' || phase === 'loading'}
             className="btn-shimmer w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-60">
             <Wand2 size={16} />
-            {phase === 'generating' ? 'Generating your remodel...' : 'Generate My Remodel →'}
+            {phase === 'generating' || phase === 'loading' ? 'Generating your remodel...' : 'Generate My Remodel →'}
           </motion.button>
         )}
 
-        {/* Trust row */}
-        <div className="flex items-center justify-center gap-4 text-[10px] text-gray-400 font-medium pt-0.5">
+        <div className="flex items-center justify-center gap-4 text-[10px] text-gray-400 font-medium">
           <span>✓ No signup needed</span>
-          <span>✓ Results in seconds</span>
+          <span>✓ Real AI generation</span>
           <span>✓ Free demo</span>
         </div>
       </div>
