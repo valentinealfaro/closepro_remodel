@@ -152,9 +152,9 @@ Format: Specific, executable growth playbooks with expected ROI and resource req
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2025-02-11-preview",
-});
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2025-02-11-preview" })
+  : null;
 
 async function startServer() {
   const app = express();
@@ -204,7 +204,7 @@ async function startServer() {
     try {
       const { amount, invoiceId, tenantId, clientEmail, projectName } = req.body;
 
-      if (!process.env.STRIPE_SECRET_KEY) {
+      if (!stripe) {
         return res.status(500).json({ error: "Stripe secret key not configured" });
       }
 
