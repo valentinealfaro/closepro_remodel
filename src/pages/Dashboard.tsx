@@ -39,6 +39,8 @@ import AdminPanel from '../components/AdminPanel';
 import AgentsPanel from '../components/AgentsPanel';
 import EmbedCodePanel from '../components/EmbedCodePanel';
 import ProjectsPanel from '../components/ProjectsPanel';
+import OnboardingSetupWizard from '../components/OnboardingSetupWizard';
+import { OnboardingService } from '../services/OnboardingService';
 
 // ─── Account Settings Page ─────────────────────────────────────────────────
 
@@ -590,6 +592,34 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [showOnboardingWizard, setShowOnboardingWizard] = useState(false);
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
+
+  // Check if user needs onboarding on first load
+  useEffect(() => {
+    const checkOnboarding = async () => {
+      if (!user?.uid || onboardingChecked) return;
+      
+      try {
+        const progress = await OnboardingService.getProgress(user.uid);
+        // Show wizard if user hasn't completed onboarding and is not a super admin
+        const isSuperAdmin = userData?.role === 'super_admin' ||
+                            user?.email?.toLowerCase().trim() === 'info@vcvservices.com' ||
+                            user?.email?.toLowerCase().trim() === 'lawtonroofer@gmail.com';
+        
+        if (!progress && !isSuperAdmin) {
+          // Give them a moment to see the dashboard, then show wizard
+          setTimeout(() => setShowOnboardingWizard(true), 1000);
+        }
+      } catch (error) {
+        console.log('Error checking onboarding:', error);
+      }
+      
+      setOnboardingChecked(true);
+    };
+
+    checkOnboarding();
+  }, [user?.uid, onboardingChecked, userData?.role]);
 
   // Close mobile nav on route change
   useEffect(() => {
@@ -803,6 +833,20 @@ export default function Dashboard() {
           </Routes>
         </div>
       </main>
+
+      {/* Onboarding Setup Wizard - Show after first login */}
+      {userData?.tenantId && (
+        <OnboardingSetupWizard
+          isOpen={showOnboardingWizard}
+          onClose={() => setShowOnboardingWizard(false)}
+          onComplete={() => {
+            setShowOnboardingWizard(false);
+            // Optionally navigate to first step
+            navigate('/app/settings');
+          }}
+          tenantId={userData.tenantId}
+        />
+      )}
     </div>
   );
 }
