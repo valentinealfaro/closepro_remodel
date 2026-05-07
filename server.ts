@@ -4,9 +4,34 @@ import path from "path";
 import { fileURLToPath } from "url";
 import Stripe from "stripe";
 import { GoogleGenAI } from "@google/genai";
+import admin from "firebase-admin";
 import dotenv from "dotenv";
 
 dotenv.config();
+
+// ── Firebase Admin (server-side Firestore operations) ───────────────────────
+if (!admin.apps.length) {
+  // For local development, you can use a service account key file
+  // Download from Firebase Console > Project Settings > Service Accounts
+  // and set GOOGLE_APPLICATION_CREDENTIALS=path/to/key.json
+  // Or set FIREBASE_SERVICE_ACCOUNT_KEY in .env as JSON string
+  const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
+    ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)
+    : null;
+  
+  if (serviceAccount) {
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+      projectId: process.env.VITE_FIREBASE_PROJECT_ID,
+    });
+  } else {
+    // Fallback for local dev - requires GOOGLE_APPLICATION_CREDENTIALS env var
+    admin.initializeApp({
+      projectId: process.env.VITE_FIREBASE_PROJECT_ID,
+    });
+  }
+}
+const dbAdmin = admin.firestore();
 
 // ── Gemini client (server-side only — key never sent to browser) ─────────────
 const GEMINI_KEY = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || process.env.API_KEY || "";
@@ -44,14 +69,97 @@ const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2025-02-11-preview" })
   : null;
 
+// ── Simple in-memory per-IP rate limiter ──────────────────────────────────────
+// For production, replace with Upstash/Redis. This guards against casual abuse
+// only — multi-instance deployments need a shared store.
+const rateBuckets = new Map<string, { count: number; resetAt: number }>();
+function rateLimit(key: string, max: number, windowMs: number): boolean {
+  const now = Date.now();
+  const bucket = rateBuckets.get(key);
+  if (!bucket || bucket.resetAt < now) {
+    rateBuckets.set(key, { count: 1, resetAt: now + windowMs });
+    return true;
+  }
+  if (bucket.count >= max) return false;
+  bucket.count++;
+  return true;
+}
+function clientIp(req: any): string {
+  const fwd = req.headers['x-forwarded-for'];
+  if (typeof fwd === 'string' && fwd.length) return fwd.split(',')[0].trim();
+  return req.ip || req.socket?.remoteAddress || 'unknown';
+}
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
+
+  // Stripe webhook needs the raw body for signature verification — must be
+  // registered BEFORE express.json().
+  app.post(
+    '/api/stripe-webhook',
+    express.raw({ type: 'application/json' }),
+    async (req, res) => {
+      if (!stripe) return res.status(500).json({ error: 'Stripe not configured' });
+      const secret = process.env.STRIPE_WEBHOOK_SECRET;
+      if (!secret) return res.status(500).json({ error: 'STRIPE_WEBHOOK_SECRET not set' });
+
+      const sig = req.headers['stripe-signature'] as string;
+      let event;
+      try {
+        event = stripe.webhooks.constructEvent(req.body, sig, secret);
+      } catch (err: any) {
+        console.error('Stripe webhook signature verification failed:', err.message);
+        return res.status(400).send(`Webhook Error: ${err.message}`);
+      }
+
+      switch (event.type) {
+        case 'checkout.session.completed': {
+          const session = event.data.object as any;
+          const tenantId = session.metadata?.tenantId;
+          const invoiceId = session.metadata?.invoiceId;
+          console.log(`[stripe] checkout.session.completed tenant=${tenantId} invoice=${invoiceId} amount=${session.amount_total}`);
+          
+          if (tenantId && invoiceId) {
+            try {
+              // Update tenant status to active
+              await dbAdmin.collection('tenants').doc(tenantId).update({
+                status: 'active',
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+              });
+              
+              // Update invoice status to paid
+              await dbAdmin.collection('tenants').doc(tenantId).collection('invoices').doc(invoiceId).update({
+                status: 'paid',
+                paidAt: admin.firestore.FieldValue.serverTimestamp(),
+              });
+              
+              console.log(`[stripe] Updated Firestore for tenant ${tenantId}, invoice ${invoiceId}`);
+            } catch (error) {
+              console.error('[stripe] Failed to update Firestore:', error);
+            }
+          }
+          break;
+        }
+        case 'customer.subscription.deleted':
+        case 'customer.subscription.updated':
+          console.log(`[stripe] ${event.type}`);
+          break;
+        default:
+          console.log(`[stripe] unhandled event ${event.type}`);
+      }
+      res.json({ received: true });
+    }
+  );
 
   app.use(express.json({ limit: '30mb' }));
 
   // ── Agent API — streaming (Gemini) ────────────────────────────────────────
   app.post("/api/agents/:agentId", async (req, res) => {
+    const ip = clientIp(req);
+    if (!rateLimit(`agent:1m:${ip}`, 10, 60_000)) {
+      return res.status(429).json({ error: 'Too many requests' });
+    }
     const { agentId } = req.params;
     const { prompt } = req.body;
     const agent = AGENTS[agentId];
@@ -278,6 +386,12 @@ ${NEGATIVE_PROMPT}`;
   // ── AI Remodel Image Generation Endpoint ──────────────────────────────────────
 
   app.post('/api/generate-remodel', async (req, res) => {
+    // 5 generations per IP per minute, 60 per hour
+    const ip = clientIp(req);
+    if (!rateLimit(`gen:1m:${ip}`, 5, 60_000) || !rateLimit(`gen:1h:${ip}`, 60, 60 * 60_000)) {
+      return res.status(429).json({ error: 'Too many requests. Please wait a moment and try again.' });
+    }
+
     const { imageBase64, mimeType = 'image/jpeg', roomType = 'kitchen', style = 'modern', budget = 'midrange', materials = {}, mode = 'realistic', notes = '' } = req.body;
 
     if (!imageBase64) return res.status(400).json({ error: 'imageBase64 is required' });

@@ -124,6 +124,26 @@ ${NEGATIVE_PROMPT}`;
 
 // ── Vercel serverless handler ─────────────────────────────────────────────────
 
+// In-memory per-IP throttle. On Vercel, instances are warm-recycled so this
+// gives best-effort defence; for guaranteed limits use Upstash/Redis.
+const rateBuckets = new Map<string, { count: number; resetAt: number }>();
+function rateLimit(key: string, max: number, windowMs: number): boolean {
+  const now = Date.now();
+  const bucket = rateBuckets.get(key);
+  if (!bucket || bucket.resetAt < now) {
+    rateBuckets.set(key, { count: 1, resetAt: now + windowMs });
+    return true;
+  }
+  if (bucket.count >= max) return false;
+  bucket.count++;
+  return true;
+}
+function clientIp(req: any): string {
+  const fwd = req.headers['x-forwarded-for'];
+  if (typeof fwd === 'string' && fwd.length) return fwd.split(',')[0].trim();
+  return req.socket?.remoteAddress || 'unknown';
+}
+
 export default async function handler(req: any, res: any) {
   // CORS headers (needed for cross-origin fetch from the SPA)
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -132,6 +152,11 @@ export default async function handler(req: any, res: any) {
 
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+
+  const ip = clientIp(req);
+  if (!rateLimit(`gen:1m:${ip}`, 5, 60_000) || !rateLimit(`gen:1h:${ip}`, 60, 60 * 60_000)) {
+    return res.status(429).json({ error: "Too many requests. Please wait a moment and try again." });
+  }
 
   const {
     imageBase64,

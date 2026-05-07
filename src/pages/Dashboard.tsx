@@ -297,45 +297,43 @@ const AccountSettings = () => {
             <div className="flex items-center justify-between p-6 bg-blue-electric/5 border border-blue-electric/20 rounded-xl">
               <div>
                 <p className="text-sm text-gray-500 font-medium">Active Plan</p>
-                <h3 className="text-2xl font-black text-navy capitalize">{userData?.plan || 'Starter'}</h3>
-                <p className="text-sm text-gray-500 mt-1">Renews on May 1, 2026</p>
+                <h3 className="text-2xl font-black text-navy">ClosePro AI Widget</h3>
+                <p className="text-sm text-gray-500 mt-1 capitalize">
+                  {userData?.status === 'trialing' ? 'Free trial' : userData?.status === 'active' ? 'Active' : userData?.status || 'Trial'}
+                </p>
               </div>
               <div className="text-right">
                 <p className="text-3xl font-black text-navy">
-                  {userData?.plan === 'pro' ? '$497' : userData?.plan === 'growth' ? '$197' : '$97'}
-                  <span className="text-sm font-normal text-gray-400">/mo</span>
+                  $149<span className="text-sm font-normal text-gray-400">/mo</span>
                 </p>
-                <Link to="/pricing" className="text-xs text-blue-electric hover:underline font-bold flex items-center gap-1 justify-end mt-1">
-                  Upgrade plan <ChevronRight size={12} />
-                </Link>
+                <p className="text-xs text-gray-500 mt-1">300 generations / month</p>
               </div>
             </div>
           </div>
 
           {/* Plan Features */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
-            <h2 className="font-bold text-navy text-lg mb-4">Plan Features</h2>
+            <h2 className="font-bold text-navy text-lg mb-4">What's Included</h2>
             <div className="space-y-3">
               {[
-                { feature: 'Lead Management', included: true },
-                { feature: 'CRM Pipeline', included: true },
-                { feature: 'Estimates & Invoices', included: true },
-                { feature: 'AI Remodel Visualizer', included: (userData?.plan === 'growth' || userData?.plan === 'pro') },
-                { feature: 'Marketing Automation', included: (userData?.plan === 'growth' || userData?.plan === 'pro') },
-                { feature: 'AI Copy Generator', included: userData?.plan === 'pro' },
-                { feature: 'Priority Support', included: userData?.plan === 'pro' }
-              ].map(({ feature, included }) => (
+                'AI remodel visualizer on YOUR website',
+                '300 homeowner generations / month',
+                'Lead inbox (name, email + photos)',
+                'Before & after photos saved',
+                'Simple project folders',
+                'Your unique embed code',
+                'Works on any website builder',
+                'Email support',
+              ].map((feature) => (
                 <div key={feature} className="flex items-center gap-3">
-                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-black ${included ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
-                    {included ? '✓' : '✕'}
-                  </span>
-                  <span className={`text-sm ${included ? 'text-navy font-medium' : 'text-gray-400'}`}>{feature}</span>
+                  <span className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-black bg-green-100 text-green-600">✓</span>
+                  <span className="text-sm text-navy font-medium">{feature}</span>
                 </div>
               ))}
             </div>
-            <Link to="/pricing" className="btn-primary mt-6 inline-flex items-center gap-2 text-sm">
-              Upgrade Your Plan <ChevronRight size={16} />
-            </Link>
+            <p className="text-xs text-gray-500 mt-6">
+              Need more than 300 generations? Extra generations are <strong className="text-navy">$0.25 each</strong>.
+            </p>
           </div>
 
           {/* Cancel */}
@@ -782,7 +780,7 @@ export default function Dashboard() {
             <div className="flex items-center gap-2">
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-bold text-navy leading-none">{userData?.displayName || 'User'}</p>
-                <p className="text-[10px] text-electric font-bold capitalize leading-none mt-0.5">{userData?.plan || 'Starter'} Plan</p>
+                <p className="text-[10px] text-electric font-bold leading-none mt-0.5">{userData?.status === 'trialing' ? 'Trial' : 'Active'}</p>
               </div>
               <Link to="/app/settings" className="w-9 h-9 bg-electric rounded-full flex items-center justify-center text-white font-bold text-sm hover:bg-blue-700 transition-colors">
                 {userData?.displayName?.[0] || (user?.email?.[0] || '').toUpperCase()}

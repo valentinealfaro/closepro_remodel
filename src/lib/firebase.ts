@@ -3,16 +3,20 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBBoma7WimmW11Pmi3C_s_H6JEkZRmDn14",
-  authDomain: "closepro-remodel-4d5ed.firebaseapp.com",
-  projectId: "closepro-remodel-4d5ed",
-  storageBucket: "closepro-remodel-4d5ed.firebasestorage.app",
-  messagingSenderId: "245875196664",
-  appId: "1:245875196664:web:c22b912becd0c51b26b10d",
-  measurementId: "G-J0GMNYDDHL",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
-const firestoreDatabaseId = '(default)';
+const firestoreDatabaseId = import.meta.env.VITE_FIREBASE_FIRESTORE_DB_ID || '(default)';
+
+if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+  console.error('Firebase config missing — check VITE_FIREBASE_* vars in .env');
+}
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, firestoreDatabaseId);

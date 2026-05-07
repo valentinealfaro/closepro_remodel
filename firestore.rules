@@ -120,6 +120,15 @@ service cloud.firestore {
              data.status is string;
     }
 
+    function isValidPublicLead(data) {
+      return data.keys().hasAll(['email', 'createdAt']) &&
+             data.email is string && isValidEmail(data.email) && data.email.size() <= 254 &&
+             (!('name' in data) || (data.name is string && data.name.size() <= 100)) &&
+             (!('phone' in data) || (data.phone is string && data.phone.size() <= 30)) &&
+             (!('source' in data) || (data.source is string && data.source.size() <= 64)) &&
+             data.size() <= 20;
+    }
+
     // ===============================================================
     // Rules
     // ===============================================================
@@ -248,18 +257,32 @@ service cloud.firestore {
       match /ad_creatives/{adId} {
         allow read, write: if isTenantMember(tenantId) || isSuperAdmin();
       }
+
+      // Widget leads — public visitors via embedded iframe can create
+      match /widgetLeads/{leadId} {
+        allow read: if isTenantMember(tenantId) || isSuperAdmin();
+        allow create: if isValidPublicLead(request.resource.data);
+        allow update, delete: if isTenantMember(tenantId) || isSuperAdmin();
+      }
+    }
+
+    // Global widgetLeads mirror — for cross-tenant admin visibility
+    match /widgetLeads/{leadId} {
+      allow read: if isSuperAdmin();
+      allow create: if isValidPublicLead(request.resource.data);
     }
 
     // ── Public lead capture (no auth required) ───────────────────────────────
-    // These collections receive form submissions from unauthenticated visitors
+    // These collections receive form submissions from unauthenticated visitors.
+    // isValidPublicLead (declared above) validates shape/size to deter bots.
     match /demoRequests/{doc} {
-      allow create: if true;
+      allow create: if isValidPublicLead(request.resource.data);
     }
     match /aiDemoLeads/{doc} {
-      allow create: if true;
+      allow create: if isValidPublicLead(request.resource.data);
     }
     match /contactSubmissions/{doc} {
-      allow create: if true;
+      allow create: if isValidPublicLead(request.resource.data);
     }
     match /agentBatchRuns/{doc} {
       allow create: if isAuthenticated();

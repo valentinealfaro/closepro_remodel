@@ -9,8 +9,6 @@ import Widget from './pages/Widget';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
-import Admin from './pages/Admin';
-import ErrorBoundary from './components/ErrorBoundary';
 import { AuthProvider, useAuth } from './lib/AuthContext';
 import { Toaster } from 'react-hot-toast';
 
@@ -49,12 +47,8 @@ export default function App() {
               <ProtectedRoute><Dashboard /></ProtectedRoute>
             } />
 
-            {/* Admin */}
-            <Route path="/admin/*" element={
-              <ProtectedRoute role="super_admin">
-                <ErrorBoundary><Admin /></ErrorBoundary>
-              </ProtectedRoute>
-            } />
+            {/* Admin — super-admin UI lives under /app for super_admin users */}
+            <Route path="/admin/*" element={<Navigate to="/app" replace />} />
 
             {/* 404 */}
             <Route path="*" element={<Layout><NotFound /></Layout>} />
