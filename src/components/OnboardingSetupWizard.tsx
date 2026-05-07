@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  ArrowRight, 
-  CheckCircle2, 
-  X, 
+import {
+  ArrowRight,
+  CheckCircle2,
+  X,
   Loader2,
   Zap,
   Target,
   Users,
   TrendingUp,
   Brain,
-  MessageSquare
+  MessageSquare,
+  KeyRound,
+  ExternalLink,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../lib/AuthContext';
 import { OnboardingService, OnboardingProfile, OnboardingStep } from '../services/OnboardingService';
@@ -339,27 +342,47 @@ export default function OnboardingSetupWizard({
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="space-y-6 flex-1 flex flex-col items-center justify-center"
+                className="space-y-5 flex-1 flex flex-col items-center justify-center"
               >
                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
                   <CheckCircle2 size={32} className="text-green-600" />
                 </div>
 
                 <div className="text-center space-y-2">
-                  <h3 className="text-2xl font-black text-navy">You're all set!</h3>
+                  <h3 className="text-2xl font-black text-navy">Profile saved!</h3>
                   <p className="text-sm text-gray-600">
-                    Your personalized experience is ready. Let's show you how ClosePro Remodel can help you close more deals.
+                    One last step before you can generate remodels — activate AI with your own
+                    Google API key. You pay Google directly (~$0.04/gen), not a SaaS markup.
                   </p>
                 </div>
 
-                <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 text-sm">
-                  <p className="text-navy font-bold mb-2">✨ Here's what we're recommending:</p>
-                  <ul className="text-gray-600 space-y-1 text-xs">
-                    <li>1. Complete your business profile</li>
-                    <li>2. Create your first project to see ClosePro in action</li>
-                    <li>3. Try the AI Visualizer with a real photo</li>
-                    <li>4. Get your embed code to start capturing leads</li>
-                  </ul>
+                <div className="w-full bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-100 rounded-2xl p-5">
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-xl bg-electric/10 text-electric flex items-center justify-center flex-shrink-0">
+                      <KeyRound size={20} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-navy">Activate AI in 2 minutes</p>
+                      <p className="text-xs text-gray-600 mt-0.5">
+                        Get your free Google API key from AI Studio, paste it into Settings, done.
+                      </p>
+                    </div>
+                  </div>
+                  <ol className="text-xs text-gray-600 space-y-1.5 list-decimal list-inside">
+                    <li>
+                      Open{' '}
+                      <a
+                        href="https://aistudio.google.com/app/apikey"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-electric font-bold hover:underline inline-flex items-center gap-1"
+                      >
+                        aistudio.google.com/app/apikey <ExternalLink size={10} />
+                      </a>
+                    </li>
+                    <li>Click <strong className="text-navy">Create API Key</strong> and copy it.</li>
+                    <li>Paste into Settings → AI / Integrations and hit Save.</li>
+                  </ol>
                 </div>
               </motion.div>
             )}
@@ -389,7 +412,7 @@ export default function OnboardingSetupWizard({
               onClick={handleComplete}
               className="btn-shimmer px-6 py-2.5 rounded-xl font-black text-sm flex items-center gap-2"
             >
-              Go to Dashboard <ArrowRight size={16} />
+              Add my API key <ArrowRight size={16} />
             </button>
           ) : (
             <button

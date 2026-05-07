@@ -2,6 +2,18 @@
   "functions": {
     "api/generate-remodel.ts": {
       "maxDuration": 120
+    },
+    "api/byok.ts": {
+      "maxDuration": 30
+    },
+    "api/byok/save.ts": {
+      "maxDuration": 30
+    },
+    "api/byok/test.ts": {
+      "maxDuration": 30
+    },
+    "api/byok/delete.ts": {
+      "maxDuration": 30
     }
   },
   "rewrites": [

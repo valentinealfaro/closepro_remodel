@@ -161,7 +161,7 @@ function LiveDemo() {
       const res = await fetch('/api/generate-remodel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64: base64, mimeType, roomType: room, style, budget: 'highend', mode: 'realistic', notes: notes || 'Photorealistic remodel preview.' }),
+        body: JSON.stringify({ surface: 'demo', imageBase64: base64, mimeType, roomType: room, style, budget: 'highend', mode: 'realistic', notes: notes || 'Photorealistic remodel preview.' }),
       });
       clearInterval(interval);
       setGenStep(GEN_STEPS.length); setProgress(100);

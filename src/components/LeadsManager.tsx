@@ -42,7 +42,9 @@ import {
   DollarSign,
   MapPin,
   Briefcase,
-  Megaphone
+  Megaphone,
+  Wand2,
+  Camera,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../lib/AuthContext';
@@ -211,24 +213,69 @@ export default function LeadsManager() {
   useEffect(() => {
     if (!userData?.tenantId) return;
 
+    const leadsPath = `tenants/${userData.tenantId}/leads`;
+    const widgetPath = `tenants/${userData.tenantId}/widgetLeads`;
     const q = query(
-      collection(db, `tenants/${userData.tenantId}/leads`),
+      collection(db, leadsPath),
       orderBy(sortBy.field, sortBy.direction as any)
     );
+    const widgetQ = query(
+      collection(db, widgetPath),
+      orderBy('createdAt', 'desc')
+    );
 
-    const leadsPath = `tenants/${userData.tenantId}/leads`;
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const leadsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
+    let regularLeads: any[] = [];
+    let widgetLeads: any[] = [];
+    let regularReady = false;
+    let widgetReady = false;
+
+    const merge = () => {
+      // Widget leads are read-only here — they don't have status/serviceType/etc,
+      // so we project them into the same shape with sensible defaults.
+      const projectedWidget = widgetLeads.map(w => ({
+        ...w,
+        _collection: 'widgetLeads',
+        name: w.name || 'Widget Visitor',
+        status: w.status || 'new',
+        priority: w.priority || 'warm',
+        serviceType: w.serviceType || (w.roomType ? `${w.roomType[0].toUpperCase()}${w.roomType.slice(1)} Remodel` : 'Remodel'),
+        source: w.source || 'widget',
       }));
-      setLeads(leadsData);
-      setLoading(false);
+      const projectedRegular = regularLeads.map(l => ({ ...l, _collection: 'leads' }));
+      const merged = [...projectedRegular, ...projectedWidget].sort((a, b) => {
+        const ta = a.createdAt?.toMillis?.() || 0;
+        const tb = b.createdAt?.toMillis?.() || 0;
+        return tb - ta;
+      });
+      setLeads(merged);
+      if (regularReady && widgetReady) setLoading(false);
+    };
+
+    const unsubLeads = onSnapshot(q, (snapshot) => {
+      regularLeads = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      regularReady = true;
+      merge();
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, leadsPath);
+      regularReady = true;
+      merge();
     });
 
-    return () => unsubscribe();
+    const unsubWidget = onSnapshot(widgetQ, (snapshot) => {
+      widgetLeads = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      widgetReady = true;
+      merge();
+    }, (error) => {
+      // Widget leads collection might not exist yet — non-fatal
+      console.warn('widgetLeads listen error', error?.message);
+      widgetReady = true;
+      merge();
+    });
+
+    return () => {
+      unsubLeads();
+      unsubWidget();
+    };
   }, [userData?.tenantId, sortBy]);
 
   // --- Handlers ---
@@ -283,7 +330,8 @@ export default function LeadsManager() {
     };
 
     try {
-      const leadPath = `tenants/${userData.tenantId}/leads/${selectedLead.id}`;
+      const collectionName = selectedLead._collection === 'widgetLeads' ? 'widgetLeads' : 'leads';
+      const leadPath = `tenants/${userData.tenantId}/${collectionName}/${selectedLead.id}`;
       await updateDoc(doc(db, leadPath), leadData).catch(e => handleFirestoreError(e, OperationType.UPDATE, leadPath));
       toast.success('Lead updated successfully');
       setIsEditModalOpen(false);
@@ -298,7 +346,9 @@ export default function LeadsManager() {
   const handleDeleteLead = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this lead?')) return;
     try {
-      const leadPath = `tenants/${userData.tenantId}/leads/${id}`;
+      const lead = leads.find(l => l.id === id);
+      const collectionName = lead?._collection === 'widgetLeads' ? 'widgetLeads' : 'leads';
+      const leadPath = `tenants/${userData.tenantId}/${collectionName}/${id}`;
       await deleteDoc(doc(db, leadPath)).catch(e => handleFirestoreError(e, OperationType.DELETE, leadPath));
       toast.success('Lead deleted successfully');
     } catch (error) {
@@ -735,7 +785,14 @@ export default function LeadsManager() {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <p className="text-xs font-bold text-navy">{lead.serviceType}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-xs font-bold text-navy">{lead.serviceType}</p>
+                          {lead.beforeImageUrl && (
+                            <span title="Photo attached" className="text-electric">
+                              <Camera size={12} />
+                            </span>
+                          )}
+                        </div>
                         <p className="text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">{lead.source}</p>
                       </td>
                       <td className="px-6 py-4">
@@ -803,8 +860,19 @@ export default function LeadsManager() {
                             <button className="p-2 text-gray-400 hover:text-navy hover:bg-gray-100 rounded-lg transition-colors">
                               <MoreHorizontal size={16} />
                             </button>
-                            <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-2 hidden group-hover/menu:block z-20">
-                              <button 
+                            <div className="absolute right-0 top-full mt-1 w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-2 hidden group-hover/menu:block z-20">
+                              {lead.beforeImageUrl && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/app/visualizer?leadId=${lead.id}&source=${lead._collection || 'leads'}`);
+                                  }}
+                                  className="w-full text-left px-4 py-2 text-sm text-electric font-bold hover:bg-blue-50 flex items-center gap-2"
+                                >
+                                  <Wand2 size={14} /> Generate Concepts
+                                </button>
+                              )}
+                              <button
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   navigate(`/app/estimates?leadId=${lead.id}`);

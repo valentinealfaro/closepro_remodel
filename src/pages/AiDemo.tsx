@@ -224,7 +224,7 @@ export default function AiDemo() {
       const res = await fetch('/api/generate-remodel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64: base64, mimeType, roomType, style, budget, materials, mode, notes }),
+        body: JSON.stringify({ surface: 'demo', imageBase64: base64, mimeType, roomType, style, budget, materials, mode, notes }),
       });
 
       clearInterval(stepInterval);

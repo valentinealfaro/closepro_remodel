@@ -5,6 +5,127 @@
 
 ---
 
+## ⭐ May 7 (evening) — Lead → Concepts workflow
+
+Closed the loop on the homeowner-photo → contractor-follow-up flow. While wiring
+this up I found two coupled bugs:
+
+- **Widget was saving `beforeImageUrl: previewUrl` (a `blob:` URL).** That URL
+  only works in the homeowner's tab. After submission the photo was effectively
+  lost. Fix: serialize the already-compressed JPEG as a `data:` URL so the
+  contractor can actually retrieve it later. Stays under Firestore's 1 MB doc
+  limit at default compression.
+- **LeadsManager only listened to `tenants/{id}/leads`, not `widgetLeads`.**
+  Homeowner submissions never showed up in the contractor's leads inbox at all.
+  Fix: subscribe to both, project widget leads into the lead shape with sensible
+  defaults (`status='new'`, `priority='warm'`, `serviceType` from `roomType`),
+  tag with `_collection` so update/delete route to the correct path.
+
+Built the new workflow:
+
+- **`LeadConcepts.tsx`** — focused lead-driven generator. Loads a lead, shows the
+  homeowner's photo + a style picker, generates concepts via the BYOK
+  `/api/generate-remodel`. Each concept gets Download / Email actions; the email
+  button opens a `mailto:` draft pre-filled with the homeowner's address.
+- **Visualizer router** — `/app/visualizer` now dispatches: if `?leadId=X` is
+  present, render `LeadConcepts`; otherwise render the heavyweight `AIVisualizer`.
+- **LeadsManager "Generate Concepts" button** appears on any lead with a photo
+  and deep-links to `/app/visualizer?leadId=...&source=widgetLeads|leads`. Camera
+  icon next to the service type at-a-glance flags photo-attached leads.
+- **Widget no-key UX hardened** — when the contractor's BYOK is missing, the
+  homeowner now sees a "Coming soon" panel with an inline lead form. We still
+  capture the lead (no after-image) so the contractor can follow up once their
+  visualizer is live. The `done` step degrades gracefully when there's no result
+  image.
+
+## ⭐ May 7 (late) — AI Visualizer mounted, Pricing wedge, widget polish
+
+- **AI Visualizer routed** at `/app/visualizer` with a sidebar nav link (Wand2 icon).
+  The 1300-line component existed but had no route. Contractors can now self-test
+  their visualizer and generate alternative concepts to send leads.
+- **AIVisualizer activation empty state** — when BYOK isn't configured, render an
+  orange "AI Visualizer is offline" card with the 3-step setup recipe and a
+  one-click "Activate AI now" CTA.
+- **Pricing page wedge band** — added a side-by-side BYOK callout right under the
+  pricing cards: "Unlimited AI on every plan. You pay Google's price ($0.04/gen),
+  not a 5× SaaS markup." Comparison row updated. New BYOK FAQ entry.
+- **Widget polish** — when generation fails with `NO_KEY` / `INVALID_KEY`, the
+  widget now renders a friendly "Coming soon — this visualizer is still being set
+  up" state instead of the generic ⚠️ Generation Issue. Homeowners can still drop
+  contact info to be notified when it's live (lead capture preserved).
+
+## ⭐ May 7 (afternoon) — Onboarding flow tightened around BYOK
+
+After the BYOK pivot landed, the new bottleneck is "did the contractor actually
+add their key?" Reworked the post-signup path so that's the unmissable next action:
+
+- **Onboarding checklist** ([Dashboard.tsx](extracted/src/pages/Dashboard.tsx)) now leads with
+  `🔑 Activate AI (add Google API key)` as Step 1. It's auto-checked from server
+  state — no manual "mark done" needed. Step ordering reflects the real funnel:
+  byok → profile → embed → install → first lead → first project.
+- **OnboardingSetupWizard** "ready" step now ends with a clear "Activate AI in 2
+  minutes" card with the 3-step recipe (open AI Studio → Create API Key → paste
+  in Settings). Primary CTA changed from "Go to Dashboard" → "Add my API key"
+  and deep-links to `/app/settings?tab=ai`.
+- **Dashboard Overview primary CTA** is now conditional: shows an orange
+  "Activate AI to start generating" panel when BYOK isn't configured; reverts to
+  the embed-code panel once it is.
+- **EmbedCodePanel** shows an amber "Activate AI before embedding" banner with a
+  one-click activate link when BYOK is missing — prevents contractors from
+  pasting a snippet that would error for their visitors.
+
+## ⭐ May 7 — BYOK + Gemini 2.5 Flash Image (image-to-image fix)
+
+**The bug we shipped a fix for:** The legacy `/api/generate-remodel` was silently
+falling through outdated Gemini model IDs to Imagen-3 (text-to-image) and
+Pollinations (text-to-image). Result: "brand new kitchen" instead of an edit
+of the homeowner's photo. Compounding that, `vite.config.ts` was injecting our
+`GEMINI_API_KEY` into the **client bundle** — exposed to anyone viewing source.
+
+**Fix shipped:**
+
+- **All Gemini calls go through `lib/gemini.ts`**, which uses `gemini-2.5-flash-image-preview`
+  with the input photo as `inline_data`. Imagen-3 + Pollinations fallbacks deleted.
+- **BYOK**: each tenant adds their own Google API key in Settings → AI / Integrations.
+  Stored AES-256-GCM-encrypted in `tenants/{id}.googleApiKeyEncrypted`. Decryption
+  is server-only via `firebase-admin`.
+- **`vite.config.ts` no longer leaks** `GEMINI_API_KEY` into the browser bundle.
+- **Three surfaces** routed through one server endpoint:
+  - `surface: 'app'` — Firebase ID token → contractor's key
+  - `surface: 'widget'` — `tenantId` → contractor's key, with stricter per-tenant rate-limit
+  - `surface: 'demo'` — `CLOSEPRO_DEMO_KEY` env var with hard daily/IP caps (the only path that uses our key)
+- **Plan pivot:** AI generations are now **unlimited on every paid plan** (BYOK = contractor pays Google).
+  Plans differentiate on seats / projects / custom domain / widget / white-label / support. Removed the
+  `aiGenerations` gate from `usePlanLimits`/`UpgradePromptModal` flows.
+- **Marketing wedge added:** "Bring your own AI key. Pay Google's price (~$0.04/gen), not a 5× SaaS markup."
+  Surfaced on the Settings AI tab.
+
+**New env vars:**
+
+- `ENCRYPTION_KEY` (≥32 chars) — required. Encrypts tenant keys at rest.
+- `CLOSEPRO_DEMO_KEY` — optional, only powers `/` and `/ai-demo` marketing demo.
+
+**New files:**
+
+- `lib/crypto.ts`, `lib/firebase-admin.ts`, `lib/byok.ts`, `lib/gemini.ts`,
+  `lib/prompts.ts`, `lib/rate-limit.ts`, `lib/generate-handler.ts`, `lib/byok-handlers.ts`
+- `api/byok.ts`, `api/byok/save.ts`, `api/byok/test.ts`, `api/byok/delete.ts`
+- `src/components/AiKeySettings.tsx`, `src/services/ByokClient.ts`, `src/lib/authedFetch.ts`
+
+**Touched:** `server.ts`, `api/generate-remodel.ts`, `vite.config.ts`, `vercel.json`,
+`src/components/AIVisualizer.tsx`, `src/pages/Dashboard.tsx`, `src/pages/Widget.tsx`,
+`src/pages/AiDemo.tsx`, `src/pages/Home.tsx`, `src/services/PlanService.ts`.
+
+**Logged for later (NOT shipped this pass):**
+
+- Per-tenant `widgetSecret` so widget URLs aren't trivially scrapable
+- Move generated images out of Firestore docs (1 MB limit) into Firebase Storage
+- Free + BYOK acquisition tier (deferred — focus is conversion to paid first)
+
+
+
+---
+
 ## ✅ Completed (Phase 1: Foundation)
 
 ### Backend Infrastructure
@@ -88,10 +209,22 @@
 
 ## 🔄 In Progress (Phase 2: Conversion Optimization)
 
-- [ ] **Integrate MetricsDashboard into AdminPanel**
-  - Add 'metrics' tab to AdminPanel
-  - Make accessible to super admin users
-  - Real-time KPI monitoring
+- ✅ **Integrate MetricsDashboard into AdminPanel** *(done May 7)*
+  - Added 'growth' tab to AdminPanel (TrendingUp icon)
+  - Renders existing MetricsDashboard component
+  - Accessible via super admin Settings → Growth
+
+- ✅ **In-App Trial Counter** *(done May 7)*
+  - `TrialBanner` component shows N days remaining
+  - Color/urgency escalates: blue → amber (≤5d) → orange (≤2d) → red (expired)
+  - Mounted above dashboard header for trialing tenants
+  - "See offer" CTA opens early adopter modal; "Upgrade" links to /pricing
+
+- ✅ **Early Adopter Offer UI** *(done May 7)*
+  - `EarlyAdopterOfferModal` component (plan picker → reserve → accept flow)
+  - Wired to `EarlyAdopterService` (createOffer/acceptOffer/declineOffer)
+  - Captures case-study / video-testimonial / review commitments
+  - Mounted in Dashboard, opened from TrialBanner CTA
 
 - [ ] **Trial Expiration Emails**
   - Implement transactional email system
@@ -100,18 +233,17 @@
   - Day 5: Social proof email
   - Day 6: Early adopter offer email
 
-- [ ] **In-App Trial Counter**
-  - Show days remaining in dashboard header
-  - Create urgency messaging
-  - Show savings if they upgrade now
-
 ---
 
 ## 📋 Not Started (Phase 2-4)
 
 ### Priority 1: Trial-to-Paid Conversion
-- [ ] Feature gating based on plan (AI generations, projects, team members)
-- [ ] Upgrade prompts when hitting limits
+- ✅ Feature gating foundation *(done May 7)*
+  - `PlanService` with starter/growth/pro definitions, monthly usage tracking on tenant doc, period rollover, recommendUpgrade helper
+  - `usePlanLimits` hook returns `{ plan, canUse, usageFor, recordUsage, refresh }`
+  - `UpgradePromptModal` shows current vs. recommended plan, savings via early-adopter pricing
+  - First gate live on AIVisualizer: blocks `generateRemodel` when over the monthly cap, records usage on success, shows "X/Y used this month" under the generate button
+- [ ] Extend gating to projects, team members, leads (hook in place — wire UI)
 - [ ] Client portal preview feature
 - [ ] Improve estimate generation flow
 - [ ] "Day 1 Success Call" reminder system

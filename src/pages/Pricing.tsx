@@ -15,7 +15,7 @@ const plans = [
     features: [
       "High-converting lead capture website",
       "Basic contractor CRM (up to 150 leads)",
-      "AI visualizer (15 generations/month)",
+      "Unlimited AI generations (BYOK — pay Google ~$0.04 each)",
       "Automated email follow-ups (5-touch)",
       "Demo booking calendar",
       "Mobile job tracker",
@@ -35,7 +35,7 @@ const plans = [
     features: [
       "Everything in Launchpad",
       "Full CRM pipeline + deal tracking",
-      "Unlimited AI remodel visualizations",
+      "Unlimited AI generations (BYOK — your Google key)",
       "SMS + email automation sequences",
       "Estimates & invoice system",
       "Project management tools",
@@ -93,7 +93,7 @@ const plans = [
 const comparisonRows = [
   { label: "Lead Capture Website", launchpad: "✔", accelerator: "✔", catalyst: "✔", apex: "✔" },
   { label: "CRM System", launchpad: "Basic (150)", accelerator: "Full Pipeline", catalyst: "Advanced", apex: "Unlimited" },
-  { label: "AI Visualizer", launchpad: "15/mo", accelerator: "Unlimited", catalyst: "Unlimited", apex: "Custom-Trained" },
+  { label: "AI Visualizer (BYOK)", launchpad: "Unlimited", accelerator: "Unlimited", catalyst: "Unlimited", apex: "Unlimited + Custom-Trained" },
   { label: "SMS Automation", launchpad: "✖", accelerator: "✔", catalyst: "✔", apex: "✔" },
   { label: "Email Sequences", launchpad: "5-touch", accelerator: "Full 14-day", catalyst: "Full 14-day", apex: "Custom" },
   { label: "Estimates & Invoices", launchpad: "✖", accelerator: "✔", catalyst: "✔", apex: "✔" },
@@ -270,6 +270,47 @@ export default function Pricing() {
             Limited onboarding spots available. We only work with select remodelers per market.
           </p>
         </div>
+
+        {/* BYOK wedge */}
+        <div className="max-w-5xl mx-auto px-6 mt-16">
+          <div className="bg-gradient-to-br from-blue-electric/5 to-blue-electric/10 border-2 border-blue-electric/20 rounded-3xl p-8 md:p-10">
+            <div className="grid md:grid-cols-3 gap-6 items-center">
+              <div className="md:col-span-2 space-y-3">
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-electric/10 text-blue-electric rounded-full text-xs font-black uppercase tracking-widest">
+                  <Zap size={12} /> Bring your own AI key
+                </div>
+                <h3 className="text-2xl md:text-3xl font-black text-navy leading-tight">
+                  Unlimited AI on every plan. You pay Google's price — not a 5× SaaS markup.
+                </h3>
+                <p className="text-gray-600 leading-relaxed">
+                  ClosePro is the only contractor visualizer where <strong className="text-navy">you control your AI costs</strong>.
+                  Add your own Google API key, pay Google directly (typically <strong className="text-navy">~$0.04 per generation</strong>),
+                  and stop subsidizing someone else's margin. Your Stripe bill stays predictable: just the SaaS subscription.
+                </p>
+                <ul className="grid sm:grid-cols-2 gap-2 text-sm pt-2">
+                  {[
+                    'Unlimited generations on every plan',
+                    'Encrypted (AES-256) per-tenant',
+                    'Get a key in 2 minutes from Google AI Studio',
+                    'Cancel anytime — your key, your data',
+                  ].map(item => (
+                    <li key={item} className="flex items-start gap-2 text-gray-700 font-medium">
+                      <CheckCircle2 size={16} className="text-blue-electric flex-shrink-0 mt-0.5" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="bg-white rounded-2xl border border-gray-100 p-6 text-center space-y-3 shadow-lg">
+                <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Per generation</p>
+                <p className="text-5xl font-black text-blue-electric">$0.04</p>
+                <p className="text-xs text-gray-500">paid directly to Google</p>
+                <div className="h-px bg-gray-100" />
+                <p className="text-xs text-gray-400 line-through">Industry SaaS markup: $0.20+</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* ROI Section */}
@@ -432,9 +473,10 @@ export default function Pricing() {
           <div className="space-y-6">
             {[
               { q: "Which plan is right for me?", a: "Start with the plan that matches your current revenue stage. Launchpad is for solo remodelers under $500K/yr. Accelerator is our most popular plan for teams between $500K–$1M. Catalyst and Apex are for firms scaling past $1M." },
+              { q: "How does BYOK (Bring Your Own Key) work?", a: "Every plan includes unlimited AI remodel generations — but you supply your own Google API key for the AI itself. You get a free key from Google AI Studio in 2 minutes, paste it into Settings, and you're done. AI usage (~$0.04/generation) is billed directly to your Google account, not bundled into your SaaS subscription. The result: you pay Google's actual price, not a 5× SaaS markup, and your monthly ClosePro bill is predictable." },
               { q: "How quickly can I get started?", a: "Most remodelers are up and running within 24–48 hours. Our onboarding team helps you get your website and CRM configured so you can start capturing leads immediately." },
               { q: "Will this actually help me get more jobs?", a: "Yes. The system is designed specifically to improve response time, lead conversion, and closing rates. By responding to leads in seconds and presenting better visuals, you naturally win more bids." },
-              { q: "Do I need technical experience?", a: "No. Everything is built to be simple and easy to use. If you can use a smartphone, you can use ClosePro Remodel. Plus, we handle the technical setup for you." },
+              { q: "Do I need technical experience?", a: "No. Everything is built to be simple and easy to use. If you can use a smartphone, you can use ClosePro Remodel. Plus, we handle the technical setup for you — including walking you through the Google API key step." },
               { q: "Can I change plans later?", a: "Yes, you can upgrade or downgrade your plan at any time. Changes will be reflected in your next billing cycle." },
               { q: "Do you offer a free trial?", a: "We don't offer a traditional free trial, but we do offer a comprehensive 15-minute demo where you can see exactly how the platform works before committing." }
             ].map((item, i) => (

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { GoogleGenAI } from "@google/genai";
-import { 
+import {
   Upload, 
   Wand2, 
   Image as ImageIcon, 
@@ -25,10 +24,12 @@ import {
   Briefcase,
   Users,
   Eye,
-  Info
+  Info,
+  KeyRound,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../lib/AuthContext';
+import { authedFetch } from '../lib/authedFetch';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   collection, 
@@ -98,10 +99,43 @@ interface VisualDesign {
   createdAt: any;
 }
 
-export default function AIVisualizer() {
+export default function AIVisualizer({ byokConfigured }: { byokConfigured?: boolean } = {}) {
   const { userData } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Activation gate — render an empty state if BYOK isn't configured.
+  if (byokConfigured === false) {
+    return (
+      <div className="p-6 max-w-2xl mx-auto">
+        <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-3xl p-8 text-center space-y-5">
+          <div className="w-16 h-16 mx-auto rounded-full bg-orange-500/10 text-orange-600 flex items-center justify-center">
+            <Wand2 size={28} />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-black text-navy">AI Visualizer is offline</h2>
+            <p className="text-sm text-gray-600 max-w-md mx-auto">
+              Add your free Google API key in Settings to start generating remodel previews.
+              You pay Google directly (~$0.04 per generation), not a SaaS markup.
+            </p>
+          </div>
+          <ol className="text-xs text-gray-600 space-y-1.5 list-decimal list-inside bg-white/80 rounded-xl p-4 max-w-md mx-auto text-left">
+            <li>
+              Open <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-electric font-bold hover:underline">aistudio.google.com/app/apikey</a>
+            </li>
+            <li>Click <strong className="text-navy">Create API Key</strong> and copy it.</li>
+            <li>Paste into Settings → AI / Integrations.</li>
+          </ol>
+          <button
+            onClick={() => navigate('/app/settings?tab=ai')}
+            className="bg-orange-600 hover:bg-orange-700 text-white font-black text-sm px-6 py-3 rounded-xl inline-flex items-center gap-2 transition-colors"
+          >
+            <KeyRound size={16} /> Activate AI now
+          </button>
+        </div>
+      </div>
+    );
+  }
   
   // Navigation State
   const [currentProject, setCurrentProject] = useState<VisualProject | null>(null);
@@ -308,68 +342,78 @@ export default function AIVisualizer() {
 
   const generateRemodel = async () => {
     if (!image || !currentProject || !currentRoom || !userData?.tenantId) return;
+
     setGenerating(true);
     setGenResult(null);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
       const base64Data = image.split(',')[1];
-      
-      const prompt = `Remodel this ${roomType} in a ${style} style. 
-        Use ${material} materials and a ${color} color palette. 
-        ${customInstructions}
-        Keep the structural layout similar but update the cabinets, flooring, lighting, and overall aesthetic to be high-end and modern.`;
+      const inputMime = (image.match(/^data:(.*?);/) || [, 'image/jpeg'])[1];
+      const notes = `Style: ${style}. Materials: ${material}. Color palette: ${color}. ${customInstructions}`;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-image',
-        contents: {
-          parts: [
-            { inlineData: { data: base64Data, mimeType: 'image/jpeg' } },
-            { text: prompt }
-          ]
-        }
+      const res = await authedFetch('/api/generate-remodel', {
+        method: 'POST',
+        body: JSON.stringify({
+          surface: 'app',
+          imageBase64: base64Data,
+          mimeType: inputMime,
+          roomType: (roomType || '').toLowerCase().includes('bath') ? 'bathroom' : 'kitchen',
+          style: (style || 'modern').toLowerCase(),
+          budget: 'highend',
+          mode: 'realistic',
+          notes,
+        }),
       });
 
-      let generatedImageUrl = '';
-      for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData) {
-          generatedImageUrl = `data:image/png;base64,${part.inlineData.data}`;
-          break;
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || !data?.imageData) {
+        const code = data?.code as string | undefined;
+        if (code === 'NO_KEY') {
+          toast.error('Add your Google API key in Settings to start generating.');
+          navigate('/app/settings?tab=ai');
+        } else if (code === 'INVALID_KEY') {
+          toast.error('Your API key isn\'t working. Update it in Settings.');
+          navigate('/app/settings?tab=ai');
+        } else if (code === 'QUOTA') {
+          toast.error('Your Google API quota is exceeded. Increase it in Google Cloud Console.');
+        } else if (code === 'IMAGE_TOO_LARGE') {
+          toast.error('Photo is too large — try a smaller one (under 6 MB).');
+        } else {
+          toast.error(data?.error || 'Generation failed');
         }
+        return;
       }
 
-      if (generatedImageUrl) {
-        setGenResult(generatedImageUrl);
-        
-        // Save to Firestore
-        const designPath = `tenants/${userData.tenantId}/visual_projects/${currentProject.id}/rooms/${currentRoom.id}/designs`;
-        const designData = {
-          tenantId: userData.tenantId,
-          projectId: currentProject.id,
-          roomId: currentRoom.id,
-          originalImageUrl: image,
-          generatedImageUrl: generatedImageUrl,
-          prompt,
-          style,
-          version: (designs.length || 0) + 1,
-          createdAt: serverTimestamp(),
-          tags: [style, roomType, material]
-        };
+      const generatedImageUrl = `data:${data.mimeType || 'image/png'};base64,${data.imageData}`;
+      setGenResult(generatedImageUrl);
 
-        await addDoc(collection(db, designPath), designData).catch(e => handleFirestoreError(e, OperationType.CREATE, designPath));
-        
-        // Update room with reference image if it doesn't have one
-        if (!currentRoom.referenceImageUrl) {
-          const roomPath = `tenants/${userData.tenantId}/visual_projects/${currentProject.id}/rooms/${currentRoom.id}`;
-          await updateDoc(doc(db, roomPath), {
-            referenceImageUrl: image
-          }).catch(e => handleFirestoreError(e, OperationType.UPDATE, roomPath));
-        }
-        
-        toast.success('Design generated and saved!');
-      } else {
-        throw new Error('No image was generated');
+      // Save to Firestore
+      const designPath = `tenants/${userData.tenantId}/visual_projects/${currentProject.id}/rooms/${currentRoom.id}/designs`;
+      const designData = {
+        tenantId: userData.tenantId,
+        projectId: currentProject.id,
+        roomId: currentRoom.id,
+        originalImageUrl: image,
+        generatedImageUrl: generatedImageUrl,
+        prompt: notes,
+        style,
+        version: (designs.length || 0) + 1,
+        createdAt: serverTimestamp(),
+        tags: [style, roomType, material],
+      };
+
+      await addDoc(collection(db, designPath), designData).catch(e => handleFirestoreError(e, OperationType.CREATE, designPath));
+
+      // Update room with reference image if it doesn't have one
+      if (!currentRoom.referenceImageUrl) {
+        const roomPath = `tenants/${userData.tenantId}/visual_projects/${currentProject.id}/rooms/${currentRoom.id}`;
+        await updateDoc(doc(db, roomPath), {
+          referenceImageUrl: image,
+        }).catch(e => handleFirestoreError(e, OperationType.UPDATE, roomPath));
       }
+
+      toast.success('Design generated and saved!');
     } catch (err: any) {
       toast.error(err.message || 'Generation failed');
     } finally {
@@ -833,6 +877,10 @@ export default function AIVisualizer() {
                   </>
                 )}
               </button>
+
+              <p className="text-xs text-center text-gray-500">
+                Powered by your Google API key. ~$0.04 per generation.
+              </p>
             </div>
 
             {/* Generation Result Area */}
@@ -1254,6 +1302,7 @@ export default function AIVisualizer() {
           </div>
         )}
       </AnimatePresence>
+
     </div>
   );
 }

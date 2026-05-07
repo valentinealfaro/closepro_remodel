@@ -1,9 +1,14 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
-import { Copy, CheckCircle2, ExternalLink, Code2, Globe, Smartphone } from 'lucide-react';
+import { Copy, CheckCircle2, ExternalLink, Code2, Globe, Smartphone, KeyRound, AlertTriangle } from 'lucide-react';
 import { motion } from 'motion/react';
 
-export default function EmbedCodePanel() {
+interface EmbedCodePanelProps {
+  byokConfigured?: boolean;
+}
+
+export default function EmbedCodePanel({ byokConfigured }: EmbedCodePanelProps = {}) {
   const { userData } = useAuth();
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<'iframe' | 'page'>('iframe');
@@ -36,6 +41,24 @@ export default function EmbedCodePanel() {
         <h1 className="text-2xl font-bold text-navy">Your Embed Code</h1>
         <p className="text-gray-500 mt-1">Add the AI remodel visualizer to your contractor website in minutes.</p>
       </div>
+
+      {byokConfigured === false && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
+          <AlertTriangle size={20} className="text-amber-600 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-bold text-amber-900">Activate AI before embedding</p>
+            <p className="text-xs text-amber-700 mt-0.5">
+              Your widget needs your Google API key to generate previews. Without it, visitors will see "AI not activated."
+            </p>
+          </div>
+          <Link
+            to="/app/settings?tab=ai"
+            className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1.5 flex-shrink-0"
+          >
+            <KeyRound size={12} /> Activate
+          </Link>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 bg-gray-100 rounded-xl p-1 max-w-xs">

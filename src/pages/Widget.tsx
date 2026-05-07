@@ -101,6 +101,9 @@ export default function Widget() {
   const [step, setStep]         = useState<'upload' | 'configure' | 'generating' | 'result' | 'done'>('upload');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl]     = useState<string | null>(null);
+  // Compressed base64 of the homeowner's photo — saved with the lead so the
+  // contractor can reuse it later (e.g. generate alternative concepts).
+  const [beforeData, setBeforeData] = useState<{ base64: string; mimeType: string } | null>(null);
   const [isDragging, setIsDragging]     = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -113,6 +116,7 @@ export default function Widget() {
   const [progress, setProgress] = useState(0);
   const [resultSrc, setResultSrc] = useState<string | null>(null);
   const [errorMsg, setErrorMsg]   = useState('');
+  const [errorCode, setErrorCode] = useState<string>('');
 
   const [name, setName]       = useState('');
   const [email, setEmail]     = useState('');
@@ -135,21 +139,44 @@ export default function Widget() {
 
   const runGeneration = async () => {
     if (!uploadedFile) return;
-    setStep('generating'); setGenStep(0); setProgress(0); setResultSrc(null); setErrorMsg('');
+    setStep('generating'); setGenStep(0); setProgress(0); setResultSrc(null); setErrorMsg(''); setErrorCode('');
     const interval = setInterval(() => {
       setGenStep(prev => { const next = Math.min(prev + 1, GEN_STEPS.length - 2); setProgress(Math.round((next / GEN_STEPS.length) * 85)); return next; });
     }, 900);
     try {
-      const { base64, mimeType } = await compressImage(uploadedFile);
+      const compressed = beforeData || await compressImage(uploadedFile);
+      if (!beforeData) setBeforeData(compressed);
+      const { base64, mimeType } = compressed;
       const res = await fetch('/api/generate-remodel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64: base64, mimeType, roomType: room, style, budget, mode: 'realistic', notes }),
+        body: JSON.stringify({
+          surface: 'widget',
+          tenantId,
+          imageBase64: base64,
+          mimeType,
+          roomType: room,
+          style,
+          budget,
+          mode: 'realistic',
+          notes,
+        }),
       });
       clearInterval(interval); setGenStep(GEN_STEPS.length); setProgress(100);
-      if (!res.ok) { const e = await res.json().catch(() => ({})); setErrorMsg(e.message || 'Generation failed. Please try again.'); setStep('result'); return; }
-      const data = await res.json();
-      if (!data.imageData) { setErrorMsg('No image generated. Please try again with a clearer photo.'); setStep('result'); return; }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.imageData) {
+        const code = (data?.code as string | undefined) || 'OTHER';
+        const msg =
+          code === 'NO_KEY' ? 'This visualizer is still being set up — please check back soon.'
+          : code === 'INVALID_KEY' ? 'The contractor\'s AI is temporarily offline. Try again later.'
+          : code === 'QUOTA' ? 'AI quota for the day is reached — please come back tomorrow.'
+          : code === 'IMAGE_TOO_LARGE' ? 'That photo is too large — try a smaller one.'
+          : (data?.error || 'Generation failed. Please try again.');
+        setErrorMsg(msg);
+        setErrorCode(code);
+        setStep('result');
+        return;
+      }
       await new Promise(r => setTimeout(r, 500));
       setResultSrc(`data:${data.mimeType || 'image/jpeg'};base64,${data.imageData}`);
       setStep('result');
@@ -163,12 +190,17 @@ export default function Widget() {
   const handleCapture = async (e: React.FormEvent) => {
     e.preventDefault(); setSubmitting(true);
     try {
-      // Save to contractor's widgetLeads collection
+      // Use a data URL for the BEFORE image so it's actually retrievable later
+      // by the contractor. The blob: URL we use in-tab dies on reload.
+      const beforeDataUrl = beforeData
+        ? `data:${beforeData.mimeType};base64,${beforeData.base64}`
+        : previewUrl;
+
       const leadData: any = {
         name, email, phone,
         roomType: room, style, budget, notes,
         tenantId,
-        beforeImageUrl: previewUrl,
+        beforeImageUrl: beforeDataUrl,
         afterImageUrl: resultSrc,
         source: 'widget',
         createdAt: serverTimestamp(),
@@ -378,7 +410,35 @@ export default function Widget() {
           {/* ── RESULT ── */}
           {step === 'result' && (
             <motion.div key="result" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 max-w-2xl mx-auto">
-              {errorMsg ? (
+              {errorMsg && (errorCode === 'NO_KEY' || errorCode === 'INVALID_KEY') ? (
+                <div className="bg-blue-50/50 rounded-3xl border border-blue-100 p-6 space-y-5">
+                  <div className="text-center space-y-2">
+                    <p className="text-4xl">🛠️</p>
+                    <h2 className="text-xl font-black text-navy">Coming soon</h2>
+                    <p className="text-gray-600 text-sm max-w-md mx-auto">{errorMsg}</p>
+                  </div>
+                  <div className="bg-white rounded-2xl p-5 border border-blue-100 space-y-3">
+                    <p className="text-sm font-bold text-navy">Get notified when it's live</p>
+                    <p className="text-xs text-gray-500">
+                      Leave your details and the contractor will reach out as soon as the visualizer is up.
+                    </p>
+                    <form onSubmit={handleCapture} className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <input required type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Your name"
+                          className="px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-electric" />
+                        <input required type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email address"
+                          className="px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-electric" />
+                      </div>
+                      <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Phone (optional)"
+                        className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-electric" />
+                      <button type="submit" disabled={submitting}
+                        className="widget-btn w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-60">
+                        {submitting ? 'Saving...' : 'Notify me when ready'}
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              ) : errorMsg ? (
                 <div className="text-center space-y-4 py-8">
                   <p className="text-4xl">⚠️</p>
                   <h2 className="text-xl font-black text-navy">Generation Issue</h2>
@@ -438,17 +498,25 @@ export default function Widget() {
             <motion.div key="done" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="max-w-2xl mx-auto space-y-6 text-center">
               <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', bounce: 0.6 }}
                 className="text-5xl">🎉</motion.div>
-              <h2 className="text-2xl font-black text-navy">Here's your result, {name}!</h2>
-              <p className="text-gray-500">Your remodel visualization is ready. A contractor will be in touch soon about your free quote.</p>
+              <h2 className="text-2xl font-black text-navy">Thanks, {name}!</h2>
+              <p className="text-gray-500">
+                {resultSrc
+                  ? 'Your remodel visualization is ready. A contractor will be in touch soon about your free quote.'
+                  : 'The contractor will reach out as soon as the visualizer is live.'}
+              </p>
 
-              <BeforeAfterSlider before={previewUrl!} after={resultSrc!} watermark={false} />
+              {previewUrl && resultSrc && (
+                <BeforeAfterSlider before={previewUrl} after={resultSrc} watermark={false} />
+              )}
 
               <div className="flex flex-wrap justify-center gap-3">
-                <a href={resultSrc!} download={`${name.replace(/\s+/g, '-')}-remodel.jpg`}
-                  className="widget-btn px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2">
-                  <Download size={16} /> Download HD
-                </a>
-                <button onClick={() => { setStep('upload'); setUploadedFile(null); setPreviewUrl(null); setResultSrc(null); }}
+                {resultSrc && (
+                  <a href={resultSrc} download={`${name.replace(/\s+/g, '-')}-remodel.jpg`}
+                    className="widget-btn px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2">
+                    <Download size={16} /> Download HD
+                  </a>
+                )}
+                <button onClick={() => { setStep('upload'); setUploadedFile(null); setPreviewUrl(null); setResultSrc(null); setErrorCode(''); setErrorMsg(''); setBeforeData(null); }}
                   className="px-6 py-3 rounded-xl font-bold text-sm border border-gray-200 text-navy hover:bg-gray-50 transition-all">
                   Try Another Room
                 </button>

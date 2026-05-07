@@ -39,14 +39,30 @@ import AdminPanel from '../components/AdminPanel';
 import AgentsPanel from '../components/AgentsPanel';
 import EmbedCodePanel from '../components/EmbedCodePanel';
 import ProjectsPanel from '../components/ProjectsPanel';
+import AIVisualizer from '../components/AIVisualizer';
+import LeadConcepts from '../components/LeadConcepts';
 import OnboardingSetupWizard from '../components/OnboardingSetupWizard';
+import TrialBanner from '../components/TrialBanner';
+import EarlyAdopterOfferModal from '../components/EarlyAdopterOfferModal';
+import AiKeySettings from '../components/AiKeySettings';
 import { OnboardingService } from '../services/OnboardingService';
+import { ByokClient, ByokStatus } from '../services/ByokClient';
+import { KeyRound, Wand2 } from 'lucide-react';
 
 // ─── Account Settings Page ─────────────────────────────────────────────────
 
 const AccountSettings = () => {
   const { user, userData } = useAuth();
-  const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'billing' | 'business'>('profile');
+  const location = useLocation();
+  const initialTab = (() => {
+    const params = new URLSearchParams(location.search);
+    const t = params.get('tab');
+    if (t === 'ai' || t === 'business' || t === 'password' || t === 'billing' || t === 'profile') {
+      return t as 'profile' | 'password' | 'billing' | 'business' | 'ai';
+    }
+    return 'profile';
+  })();
+  const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'billing' | 'business' | 'ai'>(initialTab);
   const [saved, setSaved] = useState(false);
 
   const [profile, setProfile] = useState({
@@ -75,8 +91,9 @@ const AccountSettings = () => {
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'business', label: 'Business', icon: Building2 },
+    { id: 'ai', label: 'AI / Integrations', icon: KeyRound },
     { id: 'password', label: 'Password', icon: Lock },
-    { id: 'billing', label: 'Billing', icon: CreditCard }
+    { id: 'billing', label: 'Billing', icon: CreditCard },
   ] as const;
 
   return (
@@ -249,6 +266,9 @@ const AccountSettings = () => {
         </form>
       )}
 
+      {/* AI / Integrations Tab */}
+      {activeTab === 'ai' && <AiKeySettings />}
+
       {/* Password Tab */}
       {activeTab === 'password' && (
         <form onSubmit={handleSave} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-6">
@@ -357,14 +377,15 @@ const AccountSettings = () => {
 // ─── Onboarding Checklist ──────────────────────────────────────────────────
 
 const ONBOARDING_STEPS = [
-  { id: 'embed',    label: 'Get your embed code',                   link: '/app/embed',       icon: '🔗' },
-  { id: 'install',  label: 'Add the widget to your website',        link: '/app/embed',       icon: '💻' },
-  { id: 'profile',  label: 'Complete your business profile',        link: '/app/settings',    icon: '👤' },
-  { id: 'lead',     label: 'Receive your first widget lead',        link: '/app/leads',       icon: '📥' },
-  { id: 'project',  label: 'Save a lead into a project folder',     link: '/app/projects',    icon: '📁' },
-];
+  { id: 'byok',     label: 'Activate AI (add Google API key)',      link: '/app/settings?tab=ai', icon: '🔑', auto: true },
+  { id: 'profile',  label: 'Complete your business profile',        link: '/app/settings',        icon: '👤' },
+  { id: 'embed',    label: 'Get your embed code',                   link: '/app/embed',           icon: '🔗' },
+  { id: 'install',  label: 'Add the widget to your website',        link: '/app/embed',           icon: '💻' },
+  { id: 'lead',     label: 'Receive your first widget lead',        link: '/app/leads',           icon: '📥' },
+  { id: 'project',  label: 'Save a lead into a project folder',     link: '/app/projects',        icon: '📁' },
+] as const;
 
-const OnboardingChecklist = () => {
+const OnboardingChecklist = ({ byokConfigured }: { byokConfigured?: boolean }) => {
   const STORAGE_KEY = 'cp_onboarding_v1';
   const [completed, setCompleted] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { return []; }
@@ -372,6 +393,8 @@ const OnboardingChecklist = () => {
   const [dismissed, setDismissed] = useState(() => localStorage.getItem('cp_onboarding_dismissed') === '1');
 
   const toggle = (id: string) => {
+    const stepDef = ONBOARDING_STEPS.find(s => s.id === id);
+    if (stepDef && (stepDef as any).auto) return; // auto-tracked steps aren't toggleable
     setCompleted(prev => {
       const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
@@ -384,7 +407,12 @@ const OnboardingChecklist = () => {
     setDismissed(true);
   };
 
-  const doneCount = completed.length;
+  const isStepDone = (id: string) => {
+    if (id === 'byok') return Boolean(byokConfigured);
+    return completed.includes(id);
+  };
+
+  const doneCount = ONBOARDING_STEPS.filter(s => isStepDone(s.id)).length;
   const total = ONBOARDING_STEPS.length;
   const allDone = doneCount === total;
 
@@ -419,10 +447,16 @@ const OnboardingChecklist = () => {
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {ONBOARDING_STEPS.map(step => {
-          const done = completed.includes(step.id);
+          const done = isStepDone(step.id);
+          const auto = (step as any).auto === true;
           return (
             <div key={step.id} className="flex items-center gap-3 group">
-              <button onClick={() => toggle(step.id)} className="shrink-0">
+              <button
+                onClick={() => toggle(step.id)}
+                disabled={auto}
+                className="shrink-0 disabled:cursor-default"
+                aria-label={auto ? 'Auto-tracked' : 'Toggle complete'}
+              >
                 {done
                   ? <CheckCircle2 size={18} className="text-green-500" />
                   : <Circle size={18} className="text-gray-300 group-hover:text-blue-electric transition-colors" />}
@@ -492,9 +526,20 @@ const RecentLeads = ({ tenantId }: { tenantId?: string }) => {
   );
 };
 
+// ─── Visualizer Router — picks LeadConcepts when ?leadId present ──────────
+
+const VisualizerRouter = ({ byokConfigured }: { byokConfigured?: boolean }) => {
+  const loc = useLocation();
+  const params = new URLSearchParams(loc.search);
+  if (params.get('leadId')) {
+    return <LeadConcepts byokConfigured={byokConfigured} />;
+  }
+  return <AIVisualizer byokConfigured={byokConfigured} />;
+};
+
 // ─── Dashboard Overview ────────────────────────────────────────────────────
 
-const Overview = () => {
+const Overview = ({ byokConfigured }: { byokConfigured?: boolean }) => {
   const { user, userData } = useAuth();
   const isSuperAdmin = userData?.role === 'super_admin' ||
                        user?.email?.toLowerCase().trim() === 'info@vcvservices.com' ||
@@ -512,25 +557,45 @@ const Overview = () => {
       </div>
 
       {/* Onboarding Checklist */}
-      <OnboardingChecklist />
+      <OnboardingChecklist byokConfigured={byokConfigured} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Embed code CTA — most important action */}
-        <div className="bg-navy rounded-xl p-6 text-white space-y-4">
-          <div className="flex items-center gap-3">
-            <span className="text-3xl">🔗</span>
-            <div>
-              <h3 className="font-bold text-lg">Add the Widget to Your Website</h3>
-              <p className="text-gray-300 text-sm">Paste one snippet. Homeowners generate → you get leads.</p>
+        {/* Primary CTA — adapts based on BYOK status */}
+        {byokConfigured === false ? (
+          <div className="bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl p-6 text-white space-y-4">
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">🔑</span>
+              <div>
+                <h3 className="font-bold text-lg">Activate AI to start generating</h3>
+                <p className="text-amber-50 text-sm">Add your free Google API key — takes 2 minutes. You pay Google directly (~$0.04/gen).</p>
+              </div>
             </div>
+            <ol className="text-sm text-amber-50 space-y-1 list-decimal list-inside bg-white/10 rounded-xl p-3">
+              <li>Get a key at <strong>aistudio.google.com/app/apikey</strong></li>
+              <li>Paste it into Settings → AI / Integrations</li>
+              <li>Embed your widget and start capturing leads</li>
+            </ol>
+            <Link to="/app/settings?tab=ai" className="inline-flex items-center gap-2 bg-white text-orange-600 px-5 py-2.5 rounded-xl font-black text-sm hover:bg-amber-50 transition-all">
+              Activate AI now →
+            </Link>
           </div>
-          <div className="bg-white/10 rounded-xl p-3 font-mono text-xs text-gray-300 break-all">
-            {`<iframe src="https://closepro-remodel.vercel.app/widget/${userData?.tenantId || '...'}" width="100%" height="750" frameborder="0" style="border-radius:16px"/>`}
+        ) : (
+          <div className="bg-navy rounded-xl p-6 text-white space-y-4">
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">🔗</span>
+              <div>
+                <h3 className="font-bold text-lg">Add the Widget to Your Website</h3>
+                <p className="text-gray-300 text-sm">Paste one snippet. Homeowners generate → you get leads.</p>
+              </div>
+            </div>
+            <div className="bg-white/10 rounded-xl p-3 font-mono text-xs text-gray-300 break-all">
+              {`<iframe src="${typeof window !== 'undefined' ? window.location.origin : ''}/widget/${userData?.tenantId || '...'}" width="100%" height="750" frameborder="0" style="border-radius:16px"/>`}
+            </div>
+            <Link to="/app/embed" className="inline-flex items-center gap-2 bg-blue-electric text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-blue-600 transition-all">
+              Get Full Embed Code + Instructions →
+            </Link>
           </div>
-          <Link to="/app/embed" className="inline-flex items-center gap-2 bg-blue-electric text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-blue-600 transition-all">
-            Get Full Embed Code + Instructions →
-          </Link>
-        </div>
+        )}
 
         {/* Recent widget leads */}
         <RecentLeads tenantId={userData?.tenantId} />
@@ -594,6 +659,8 @@ export default function Dashboard() {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [showOnboardingWizard, setShowOnboardingWizard] = useState(false);
   const [onboardingChecked, setOnboardingChecked] = useState(false);
+  const [showEarlyAdopterModal, setShowEarlyAdopterModal] = useState(false);
+  const [byokStatus, setByokStatus] = useState<ByokStatus | null>(null);
 
   // Check if user needs onboarding on first load
   useEffect(() => {
@@ -626,6 +693,21 @@ export default function Dashboard() {
     setIsMobileNavOpen(false);
   }, [location.pathname]);
 
+  // Load BYOK status (refreshed when settings tab changes — settings page writes
+  // through the same client). Skipped for super admin.
+  useEffect(() => {
+    if (!user?.uid) return;
+    const isAdmin = userData?.role === 'super_admin' ||
+      user?.email?.toLowerCase().trim() === 'info@vcvservices.com' ||
+      user?.email?.toLowerCase().trim() === 'lawtonroofer@gmail.com';
+    if (isAdmin) return;
+    let cancelled = false;
+    ByokClient.status()
+      .then(s => { if (!cancelled) setByokStatus(s); })
+      .catch(() => { if (!cancelled) setByokStatus({ configured: false }); });
+    return () => { cancelled = true; };
+  }, [user?.uid, userData?.role, location.pathname]);
+
 
   const handleSignOut = async () => {
     await signOut();
@@ -645,6 +727,7 @@ export default function Dashboard() {
       ]
     : [
         { to: '/app', icon: LayoutDashboard, label: 'Overview' },
+        { to: '/app/visualizer', icon: Wand2, label: 'AI Visualizer' },
         { to: '/app/leads', icon: Users, label: 'Leads' },
         { to: '/app/projects', icon: BriefcaseIcon, label: 'Saved Projects' },
         { to: '/app/embed', icon: Globe, label: 'Embed Code' },
@@ -781,6 +864,36 @@ export default function Dashboard() {
           </div>
         )}
 
+        {!isSuperAdmin && (
+          <TrialBanner
+            status={userData?.status}
+            trialEndsAt={(userData as any)?.trialEndsAt}
+            onUpgrade={() => setShowEarlyAdopterModal(true)}
+          />
+        )}
+
+        {!isSuperAdmin && byokStatus && !byokStatus.configured && (
+          <div className="bg-amber-50 border-b border-amber-200 px-4 sm:px-6 py-3 flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-3 min-w-0">
+              <KeyRound size={18} className="text-amber-600 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-amber-900 truncate">
+                  One more step — add your Google API key
+                </p>
+                <p className="text-xs text-amber-700 truncate">
+                  ClosePro uses your Gemini key to generate remodel previews. Pay Google directly (~$0.04/gen).
+                </p>
+              </div>
+            </div>
+            <Link
+              to="/app/settings?tab=ai"
+              className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors"
+            >
+              Set it up
+            </Link>
+          </div>
+        )}
+
         {/* Header */}
         <header className="bg-white border-b border-gray-100 h-14 flex items-center justify-between px-4 flex-shrink-0">
           <div className="flex items-center gap-3">
@@ -822,10 +935,11 @@ export default function Dashboard() {
         {/* Page Content */}
         <div className="flex-1 overflow-y-auto">
           <Routes>
-            <Route path="/" element={<Overview />} />
+            <Route path="/" element={<Overview byokConfigured={byokStatus?.configured} />} />
+            <Route path="/visualizer" element={<VisualizerRouter byokConfigured={byokStatus?.configured} />} />
             <Route path="/leads" element={<LeadsManager />} />
             <Route path="/projects" element={<ProjectsPanel />} />
-            <Route path="/embed" element={<EmbedCodePanel />} />
+            <Route path="/embed" element={<EmbedCodePanel byokConfigured={byokStatus?.configured} />} />
             <Route path="/agents" element={<AgentsPanel />} />
             <Route path="/settings" element={
               isSuperAdmin && !isImpersonating ? <AdminPanel initialTab="settings" /> : <AccountSettings />
@@ -841,10 +955,21 @@ export default function Dashboard() {
           onClose={() => setShowOnboardingWizard(false)}
           onComplete={() => {
             setShowOnboardingWizard(false);
-            // Optionally navigate to first step
-            navigate('/app/settings');
+            // Drop the user straight into the BYOK setup — the only blocker between
+            // them and their first generation.
+            navigate('/app/settings?tab=ai');
           }}
           tenantId={userData.tenantId}
+        />
+      )}
+
+      {/* Early Adopter Offer Modal */}
+      {userData?.tenantId && user?.uid && (
+        <EarlyAdopterOfferModal
+          isOpen={showEarlyAdopterModal}
+          onClose={() => setShowEarlyAdopterModal(false)}
+          tenantId={userData.tenantId}
+          userId={user.uid}
         />
       )}
     </div>

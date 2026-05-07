@@ -71,13 +71,16 @@ import TenantDetailsModal from './admin/TenantDetailsModal';
 import CreateTemplateWizard from './admin/CreateTemplateWizard';
 import TemplateDetailView from './admin/TemplateDetailView';
 import SystemSettings from './admin/SystemSettings';
+import MetricsDashboard from './MetricsDashboard';
 
-export default function AdminPanel({ initialTab }: { initialTab?: 'customers' | 'templates' | 'monitoring' | 'revenue' | 'ai-assistant' | 'infrastructure' | 'settings' }) {
+type AdminTab = 'customers' | 'growth' | 'templates' | 'monitoring' | 'revenue' | 'ai-assistant' | 'infrastructure' | 'settings';
+
+export default function AdminPanel({ initialTab }: { initialTab?: AdminTab }) {
   const { user, userData, impersonate } = useAuth();
   const [tenants, setTenants] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'customers' | 'templates' | 'monitoring' | 'revenue' | 'ai-assistant' | 'infrastructure' | 'settings'>(initialTab || 'customers');
+  const [activeTab, setActiveTab] = useState<AdminTab>(initialTab || 'customers');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [aiInsights, setAiInsights] = useState<any[]>([]);
 
@@ -476,6 +479,7 @@ export default function AdminPanel({ initialTab }: { initialTab?: 'customers' | 
       <div className="flex gap-4 mb-6 border-b border-gray-100 overflow-x-auto no-scrollbar">
         {[
           { id: 'customers', label: 'Customers', icon: Building2 },
+          { id: 'growth', label: 'Growth', icon: TrendingUp },
           { id: 'ai-assistant', label: 'AI Assistant', icon: Brain },
           { id: 'templates', label: 'Global Templates', icon: Layout },
           { id: 'revenue', label: 'Revenue', icon: CreditCard },
@@ -645,6 +649,12 @@ export default function AdminPanel({ initialTab }: { initialTab?: 'customers' | 
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {activeTab === 'growth' && (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <MetricsDashboard />
         </div>
       )}
 
